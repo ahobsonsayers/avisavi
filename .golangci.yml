@@ -1,0 +1,92 @@
+# Docs: https://golangci-lint.run/docs/configuration/file
+version: "2"
+
+run:
+  go: "1.24"
+  timeout: 30m
+
+formatters:
+  # Formatters: https://golangci-lint.run/docs/formatters
+  enable:
+    - gofumpt # https://golangci-lint.run/docs/formatters/configuration/#gofumpt
+
+  settings:
+    gofumpt:
+      extra-rules: true
+
+linters:
+  # Linters: https://golangci-lint.run/docs/linters
+  enable:
+    - errcheck # https://golangci-lint.run/docs/linters/configuration/#errcheck
+    - gocritic # https://golangci-lint.run/docs/linters/configuration/#gocritic
+    - makezero # https://golangci-lint.run/docs/linters/configuration/#makezero
+    - misspell # https://golangci-lint.run/docs/linters/configuration/#misspell
+    - nolintlint # https://golangci-lint.run/docs/linters/configuration/#nolintlint
+    - revive # https://golangci-lint.run/docs/linters/configuration/#revive
+    - testifylint # https://golangci-lint.run/docs/linters/configuration/#testifylint
+    - unparam # https://golangci-lint.run/docs/linters/configuration/#unparam
+    - usestdlibvars # https://golangci-lint.run/docs/linters/configuration/#usestdlibvars
+
+  settings:
+    gocritic:
+      # Rules: https://go-critic.com/overview.html
+      enable-all: true
+      disabled-checks:
+        - commentedOutCode
+        - hugeParam
+        - whyNoLint
+
+    revive:
+      # Rules: https://github.com/mgechev/revive/blob/HEAD/RULES_DESCRIPTIONS
+      enable-all-rules: true
+      rules:
+        - name: add-constant
+          disabled: true
+
+        - name: cognitive-complexity
+          disabled: true
+
+        - name: cyclomatic
+          arguments: [12]
+
+        - name: empty-lines
+          disabled: true
+
+        - name: exported
+          arguments:
+            - disable-checks-on-constants
+            - disable-checks-on-functions
+            - disable-checks-on-methods
+            - disable-checks-on-types
+            - disable-checks-on-variables
+
+        - name: function-length
+          arguments: [50, 0] # Only check num statements, not num lines
+
+        - name: line-length-limit
+          arguments: [120]
+
+        - name: max-public-structs
+          disabled: true
+
+        - name: package-comments
+          disabled: true
+
+        - name: var-naming
+          arguments:
+            - ["ID", "IDS", "HTML", "HTTP", "JSON", "URL"] # Allow List
+            - [] # Deny List
+
+        - name: unhandled-error
+          disabled: true # Handled by errcheck linter
+
+    testifylint:
+      enable-all: true
+
+    unparam:
+      check-exported: true
+
+  exclusions:
+    # Exclusions: https://golangci-lint.run/docs/linters/false-positives
+    presets:
+      - std-error-handling
