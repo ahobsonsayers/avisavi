@@ -1,0 +1,34 @@
+# Docs: https://taskfile.dev/#/usage
+version: "3"
+
+tasks:
+  format:
+    cmds:
+      - go tool gofumpt -l -w .
+
+  lint:
+    cmds:
+      - go tool golangci-lint run --fix ./...
+
+  generate:
+    aliases:
+      - gen
+    cmds:
+      - go generate ./...
+
+  test:
+    cmds:
+      - go test ./...
+
+  test:clean:
+    cmds:
+      - go clean -testcache
+      - task: test
+
+  build:
+    cmds:
+      - go build -v -o ./bin/avios ./cmd/avios
+
+  run:
+    cmds:
+      - go run ./cmd/avios {{.CLI_ARGS}}
