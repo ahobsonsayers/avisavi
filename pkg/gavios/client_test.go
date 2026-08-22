@@ -128,3 +128,14 @@ func TestClient_Availability(t *testing.T) {
 	assert.Equal(t, "1", query.Get("Adults"))
 	assert.Equal(t, "true", query.Get("IncludeNonBookableFlights"))
 }
+
+func TestNormalizeAirportCode(t *testing.T) {
+	upper, err := normalizeAirportCode("lon")
+	require.NoError(t, err)
+	assert.Equal(t, "LON", upper)
+
+	for _, bad := range []string{"", "LO", "LONN", "L0N", "12A"} {
+		_, err := normalizeAirportCode(bad)
+		assert.Error(t, err, "code %q should be rejected", bad)
+	}
+}

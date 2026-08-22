@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"regexp"
+	"strings"
 
 	"github.com/ahobsonsayers/avios-cli/pkg/gavios/auth"
 	"github.com/google/uuid"
@@ -75,4 +77,15 @@ func (c *Client) get(ctx context.Context, path string, query url.Values, authMod
 	}
 
 	return nil
+}
+
+var airportCodeRegex = regexp.MustCompile(`^[a-zA-Z]{3}$`)
+
+// normalizeAirportCode validates an IATA airport code (3 letters) and
+// returns it uppercased. It returns an error for anything else.
+func normalizeAirportCode(code string) (string, error) {
+	if !airportCodeRegex.MatchString(code) {
+		return "", fmt.Errorf("invalid airport code %q: must be 3 letters", code)
+	}
+	return strings.ToUpper(code), nil
 }

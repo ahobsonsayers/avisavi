@@ -75,6 +75,16 @@ func (c *Client) Availability(
 	oneWay bool,
 	adults int,
 ) (Availability, error) {
+	origin, err := normalizeAirportCode(origin)
+	if err != nil {
+		return Availability{}, err
+	}
+
+	destination, err = normalizeAirportCode(destination)
+	if err != nil {
+		return Availability{}, err
+	}
+
 	query := url.Values{}
 	query.Set("Origin", origin)
 	query.Set("Destination", destination)
