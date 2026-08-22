@@ -1,7 +1,10 @@
 package auth
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,4 +27,38 @@ func TestAuthData_MembershipNumber_Invalid(t *testing.T) {
 	authData := &AuthData{AccessToken: "not-a-jwt"}
 	_, err := authData.MembershipNumber()
 	assert.Error(t, err)
+}
+
+func TestAuthData_NeedsRefresh(t *testing.T) {
+	makeToken := func(claims map[string]any) string {
+		header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
+		payload := base64.RawURLEncoding.EncodeToString(mustJSON(t, claims))
+		return header + "." + payload + ".ZmFrZXNpZ25hdHVyZQ"
+	}
+
+	tests := []struct {
+		name   string
+		token  string
+		expect bool
+	}{
+		{"empty token", "", true},
+		{"not a jwt", "not-a-jwt", true},
+		{"no exp claim", makeToken(map[string]any{}), true},
+		{"expired", makeToken(map[string]any{"exp": time.Now().Add(-time.Hour).Unix()}), true},
+		{"unexpired", makeToken(map[string]any{"exp": time.Now().Add(time.Hour).Unix()}), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			authData := &AuthData{AccessToken: tt.token}
+			assert.Equal(t, tt.expect, authData.NeedsRefresh())
+		})
+	}
+}
+
+func mustJSON(t *testing.T, value any) []byte {
+	t.Helper()
+	encoded, err := json.Marshal(value)
+	require.NoError(t, err)
+	return encoded
 }
