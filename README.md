@@ -1,6 +1,6 @@
 # avisavi
 
-An unofficial CLI for searching Avios reward flights from the terminal. (Binary name: `avisavi`.)
+A CLI for searching Avios reward flights from the terminal.
 
 Search reward flight availability, check your balance, and browse routes across
 cabin classes — without opening the Avios website. It talks to the same backend
