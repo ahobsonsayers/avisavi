@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -17,15 +18,9 @@ type AuthData struct {
 
 // MembershipNumber decodes the membership number from the access token.
 func (a *AuthData) MembershipNumber() (string, error) {
-	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
-	token, _, err := parser.ParseUnverified(a.AccessToken, jwt.MapClaims{})
+	claims, err := a.claims()
 	if err != nil {
-		return "", fmt.Errorf("parsing token: %w", err)
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return "", errors.New("parsing token claims")
+		return "", err
 	}
 
 	membershipNumber, ok := claims["https://avios.com/membership_id"].(string)
@@ -34,6 +29,40 @@ func (a *AuthData) MembershipNumber() (string, error) {
 	}
 
 	return membershipNumber, nil
+}
+
+// NeedsRefresh reports whether the access token is missing or expired.
+func (a *AuthData) NeedsRefresh() bool {
+	if a.AccessToken == "" {
+		return true
+	}
+
+	claims, err := a.claims()
+	if err != nil {
+		return true
+	}
+
+	exp, ok := claims["exp"].(float64)
+	if !ok {
+		return true
+	}
+
+	return time.Now().After(time.Unix(int64(exp), 0))
+}
+
+func (a *AuthData) claims() (jwt.MapClaims, error) {
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
+	token, _, err := parser.ParseUnverified(a.AccessToken, jwt.MapClaims{})
+	if err != nil {
+		return nil, fmt.Errorf("parsing token: %w", err)
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, errors.New("parsing token claims")
+	}
+
+	return claims, nil
 }
 
 // AuthDataFilePath returns the path to the auth config file.
