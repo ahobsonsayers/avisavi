@@ -12,6 +12,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jarcoal/httpmock v1.4.1
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
+	github.com/samber/lo v1.53.0
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v3 v3.10.0
 	golang.org/x/oauth2 v0.30.0
