@@ -25,10 +25,9 @@ Prebuilt binaries for macOS (arm64/amd64), Linux, and Windows are available from
 
 ## Usage
 
-Log in first — the browser flow saves your session to `~/.config/avisavi/auth.json`. You'll need an Auth0 client ID (see [Configuration](#configuration)):
+Log in first — the browser flow saves your session to `~/.config/avisavi/auth.json`:
 
 ```sh
-export AVIOS_AUTH_CLIENT_ID=client-id
 avisavi login
 ```
 
