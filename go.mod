@@ -8,6 +8,7 @@ tool (
 )
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/jarcoal/httpmock v1.4.1
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
