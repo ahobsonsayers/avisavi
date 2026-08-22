@@ -8,16 +8,28 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/pkg/browser"
 	"golang.org/x/oauth2"
 )
 
+type Client struct {
+	ClientID     string
+	CallbackPort int
+}
+
+func NewClient() Client {
+	return Client{
+		ClientID:     os.Getenv("AVIOS_AUTH_CLIENT_ID"),
+		CallbackPort: 8484,
+	}
+}
+
 // Login starts the OAuth2 PKCE flow, waiting for the browser callback.
-func Login(ctx context.Context, cfg Config) (*AuthData, error) {
-	oauthConfig := oauth2Config(cfg)
+func (c Client) Login(ctx context.Context) (*AuthData, error) {
+	oauthConfig := c.oauth2Config()
 	verifier := oauth2.GenerateVerifier()
 	state := randHex(16)
 
@@ -44,7 +56,7 @@ func Login(ctx context.Context, cfg Config) (*AuthData, error) {
 	}
 
 	authServer := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.Port),
+		Addr:    fmt.Sprintf(":%d", c.CallbackPort),
 		Handler: http.HandlerFunc(authHandlerFunc),
 	}
 
@@ -76,28 +88,25 @@ func Login(ctx context.Context, cfg Config) (*AuthData, error) {
 		return nil, errors.New("login timed out waiting for callback")
 	}
 
-	membershipNumber, err := decodeMembershipNumber(token.AccessToken)
+	authData := &AuthData{
+		AccessToken:  token.AccessToken,
+		RefreshToken: token.RefreshToken,
+	}
+	_, err = authData.MembershipNumber()
 	if err != nil {
 		return nil, fmt.Errorf("decoding membership from token: %w", err)
-	}
-
-	authData := &AuthData{
-		AccessToken:      token.AccessToken,
-		RefreshToken:     token.RefreshToken,
-		MembershipNumber: membershipNumber,
-		AuthClientID:     generateAuthClientID(),
 	}
 
 	return authData, nil
 }
 
 // Refresh exchanges the stored refresh token for a new access token.
-func Refresh(ctx context.Context, cfg Config, authData *AuthData) (*AuthData, error) {
+func (c Client) Refresh(ctx context.Context, authData *AuthData) (*AuthData, error) {
 	if authData.RefreshToken == "" {
 		return nil, errors.New("no refresh token available")
 	}
 
-	oauthConfig := oauth2Config(cfg)
+	oauthConfig := c.oauth2Config()
 	tokenSource := oauthConfig.TokenSource(
 		ctx,
 		&oauth2.Token{
@@ -117,10 +126,10 @@ func Refresh(ctx context.Context, cfg Config, authData *AuthData) (*AuthData, er
 	return authData, nil
 }
 
-func oauth2Config(cfg Config) *oauth2.Config {
+func (c Client) oauth2Config() *oauth2.Config {
 	return &oauth2.Config{
-		ClientID:    cfg.ClientID,
-		RedirectURL: cfg.Callback(),
+		ClientID:    c.ClientID,
+		RedirectURL: fmt.Sprintf("http://localhost:%d/callback", c.CallbackPort),
 		Scopes: []string{
 			"openid", "profile", "email",
 			"read:transaction", "read:member", "read:account",
@@ -131,11 +140,6 @@ func oauth2Config(cfg Config) *oauth2.Config {
 			TokenURL: "https://accounts.britishairways.com/oauth/token",
 		},
 	}
-}
-
-// generateAuthClientID builds a per-login client ID for the x-auth-client-id header.
-func generateAuthClientID() string {
-	return "BAEC-" + uuid.NewString()
 }
 
 func randHex(n int) string {
