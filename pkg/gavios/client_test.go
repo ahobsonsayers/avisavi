@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ahobsonsayers/avios-cli/pkg/auth"
+	"github.com/ahobsonsayers/avios-cli/pkg/gavios/auth"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

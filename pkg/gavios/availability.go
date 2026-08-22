@@ -7,9 +7,30 @@ import (
 	"strconv"
 )
 
+type Availability struct {
+	Origin                        LocationCode         `json:"origin"`
+	Destination                   LocationCode         `json:"destination"`
+	CabinAvailability             map[string]CabinData `json:"cabinAvailability"`
+	HighSeatAvailabilityThreshold int                  `json:"highSeatAvailabilityThreshold"`
+	MediumAvailabilityThreshold   int                  `json:"mediumAvailabilityThreshold"`
+	LowSeatAvailabilityThreshold  int                  `json:"lowSeatAvailabilityThreshold"`
+}
+
 type LocationCode struct {
-	Code string `json:"code"`
 	Name string `json:"name"`
+	Code string `json:"code"`
+}
+
+type CabinData struct {
+	Outbound Direction `json:"outbound"`
+	Inbound  Direction `json:"inbound"`
+}
+
+type Direction struct {
+	FromAvios        int                 `json:"fromAvios"`
+	AvailabilityFrom string              `json:"availabilityFrom"`
+	AvailabilityTo   string              `json:"availabilityTo"`
+	AvailableFlights map[string][]Flight `json:"availableFlights"`
 }
 
 type Flight struct {
@@ -20,27 +41,6 @@ type Flight struct {
 	Avios   int    `json:"avios"`
 	Seats   int    `json:"seats"`
 	Carrier string `json:"carrier"`
-}
-
-type Direction struct {
-	FromAvios        int                 `json:"fromAvios"`
-	AvailabilityFrom string              `json:"availabilityFrom"`
-	AvailabilityTo   string              `json:"availabilityTo"`
-	AvailableFlights map[string][]Flight `json:"availableFlights"`
-}
-
-type CabinData struct {
-	Outbound Direction `json:"outbound"`
-	Inbound  Direction `json:"inbound"`
-}
-
-type Availability struct {
-	Origin                        LocationCode         `json:"origin"`
-	Destination                   LocationCode         `json:"destination"`
-	HighSeatAvailabilityThreshold int                  `json:"highSeatAvailabilityThreshold"`
-	MediumAvailabilityThreshold   int                  `json:"mediumAvailabilityThreshold"`
-	LowSeatAvailabilityThreshold  int                  `json:"lowSeatAvailabilityThreshold"`
-	CabinAvailability             map[string]CabinData `json:"cabinAvailability"`
 }
 
 func (c *Client) Availability(

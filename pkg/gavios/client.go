@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/ahobsonsayers/avios-cli/pkg/auth"
+	"github.com/ahobsonsayers/avios-cli/pkg/gavios/auth"
 	"github.com/google/uuid"
 	"resty.dev/v3"
 )
