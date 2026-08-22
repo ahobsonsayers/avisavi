@@ -1,0 +1,52 @@
+name: Main
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  lint-test:
+    name: Lint and Test
+    uses: ./.github/workflows/lint-test.yaml
+    secrets: inherit
+
+  build:
+    name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
+    needs: [lint-test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Build binary
+        run: |
+          mkdir -p bin
+          ext=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then ext=".exe"; fi
+          name="avios-${{ matrix.goos }}-${{ matrix.goarch }}$ext"
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} CGO_ENABLED=0 \
+            go build -o "bin/$name" ./cmd/avios
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: avios-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: bin/*
