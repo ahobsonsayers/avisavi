@@ -9,7 +9,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/ahobsonsayers/avios-cli/pkg/gavios"
+	"github.com/ahobsonsayers/avisavi/pkg/gavios"
 	"github.com/samber/lo"
 	"github.com/urfave/cli/v3"
 )
@@ -24,9 +24,9 @@ This fetches the route list, then checks availability for each destination
 (with a random 1-2s delay between requests to avoid rate limiting).
 
 Examples:
-  avios search --origin LON --outbound 2026-09-09 --return 2026-09-13
-  avios search --origin LON --outbound 2026-09-09 --return 2026-09-13 --cabin Business
-  avios search --origin LON --outbound 2026-09-09 --return 2026-09-13 --adults 2 --min-seats 4`,
+  avisavi search --origin LON --outbound 2026-09-09 --return 2026-09-13
+  avisavi search --origin LON --outbound 2026-09-09 --return 2026-09-13 --cabin Business
+  avisavi search --origin LON --outbound 2026-09-09 --return 2026-09-13 --adults 2 --min-seats 4`,
 	Flags: []cli.Flag{
 		&cli.StringFlag{Name: "origin", Aliases: []string{"o"}, Value: "LON", Usage: "IATA origin code"},
 		&cli.StringFlag{Name: "outbound", Required: true, Usage: "outbound date YYYY-MM-DD"},

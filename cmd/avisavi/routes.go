@@ -16,9 +16,9 @@ var routesCmd = &cli.Command{
 the minimum and maximum Avios needed per cabin class.
 
 Examples:
-  avios routes
-  avios routes --origin LON
-  avios routes --origin JFK --adults 2 --one-way`,
+  avisavi routes
+  avisavi routes --origin LON
+  avisavi routes --origin JFK --adults 2 --one-way`,
 	Flags: []cli.Flag{
 		&cli.StringFlag{Name: "origin", Aliases: []string{"o"}, Value: "LON", Usage: "IATA origin code"},
 		&cli.IntFlag{Name: "adults", Aliases: []string{"a"}, Value: 1, Usage: "number of adults"},

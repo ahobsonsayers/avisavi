@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ahobsonsayers/avios-cli/pkg/gavios/auth"
+	"github.com/ahobsonsayers/avisavi/pkg/gavios/auth"
 	"github.com/google/uuid"
 	"resty.dev/v3"
 )

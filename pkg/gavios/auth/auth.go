@@ -68,7 +68,7 @@ func (a *AuthData) claims() (jwt.MapClaims, error) {
 // AuthDataFilePath returns the path to the auth config file.
 func AuthDataFilePath() string {
 	dir, _ := os.UserConfigDir()
-	return filepath.Join(dir, "avios", "auth.json")
+	return filepath.Join(dir, "avisavi", "auth.json")
 }
 
 // Save persists the auth data to the config file.

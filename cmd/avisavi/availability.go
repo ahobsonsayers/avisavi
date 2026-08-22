@@ -8,7 +8,7 @@ import (
 	"os"
 	"slices"
 
-	"github.com/ahobsonsayers/avios-cli/pkg/gavios"
+	"github.com/ahobsonsayers/avisavi/pkg/gavios"
 	"github.com/urfave/cli/v3"
 )
 
@@ -23,9 +23,9 @@ Business, and First cabins. Seat counts are colour-coded:
   ---     0 seats
 
 Examples:
-  avios availability --origin LON --destination ABV
-  avios availability --origin LON --destination NYC --adults 2
-  avios availability --origin LON --destination JFK --one-way`,
+  avisavi availability --origin LON --destination ABV
+  avisavi availability --origin LON --destination NYC --adults 2
+  avisavi availability --origin LON --destination JFK --one-way`,
 	Flags: []cli.Flag{
 		&cli.StringFlag{Name: "origin", Aliases: []string{"o"}, Required: true, Usage: "IATA origin code"},
 		&cli.StringFlag{Name: "destination", Aliases: []string{"d"}, Required: true, Usage: "IATA destination code"},

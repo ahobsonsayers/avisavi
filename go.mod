@@ -1,4 +1,4 @@
-module github.com/ahobsonsayers/avios-cli
+module github.com/ahobsonsayers/avisavi
 
 go 1.24.0
 

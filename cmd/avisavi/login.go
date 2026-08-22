@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ahobsonsayers/avios-cli/pkg/gavios/auth"
+	"github.com/ahobsonsayers/avisavi/pkg/gavios/auth"
 	"github.com/urfave/cli/v3"
 )
 
@@ -15,12 +15,12 @@ var loginCmd = &cli.Command{
 	Description: `Authenticate with your Avios account.
 
 Opens a browser to complete auth flow, then saves the token
-to ~/.config/avios/auth.json. The membership number is decoded from the
+to ~/.config/avisavi/auth.json. The membership number is decoded from the
 JWT automatically.
 
 Examples:
-  avios login
-  avios login --client-id LO0m9CsTZZ9qY9zY9DD2JdngeR76qqND`,
+  avisavi login
+  avisavi login --client-id LO0m9CsTZZ9qY9zY9DD2JdngeR76qqND`,
 
 	Flags: []cli.Flag{
 		&cli.StringFlag{Name: "client-id", Usage: "Auth0 client ID (overrides AVIOS_AUTH_CLIENT_ID env)"},

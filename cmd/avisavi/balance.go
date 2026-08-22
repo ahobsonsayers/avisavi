@@ -13,7 +13,7 @@ var balanceCmd = &cli.Command{
 	Description: `Display the current Avios balance for your account.
 
 Examples:
-  avios balance`,
+  avisavi balance`,
 	Flags: []cli.Flag{
 		&cli.BoolFlag{Name: "json", Usage: "print raw JSON"},
 	},
