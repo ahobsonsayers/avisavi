@@ -94,7 +94,6 @@ func TestClient_Routes(t *testing.T) {
 	assert.Equal(t, "false", query.Get("OneWay"))
 }
 
-//nolint:revive
 const availabilityJSON = `{"origin":{"code":"LON"},"destination":{"code":"ABV"},"highSeatAvailabilityThreshold":9,"mediumAvailabilityThreshold":5,"lowSeatAvailabilityThreshold":1,"cabinAvailability":{"Economy":{"outbound":{"fromAvios":0,"availabilityFrom":"2026-06-23T00:00:00+00:00","availabilityTo":"2027-06-21T00:00:00+00:00","availableFlights":{"2026-06-23T00:00:00":[{"date":"2026-06-23T22:30:00","time":"22:30","peak":true,"direct":true,"avios":0,"seats":9,"carrier":"BA"}]}},"inbound":{"fromAvios":0,"availabilityFrom":"2026-06-23T00:00:00+00:00","availabilityTo":"2027-06-21T00:00:00+00:00","availableFlights":{}}}}}`
 
 func TestClient_Availability(t *testing.T) {

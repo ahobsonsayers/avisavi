@@ -149,8 +149,12 @@ func renderSearchResults(w io.Writer, results []searchResult, outbound, returnDa
 			if len(outboundFlights) > 0 && len(inboundFlights) > 0 {
 				fmt.Fprintf(
 					writer, "%s\t%s\t%s\t%s\t%s\t%d\t%s\t%d\n",
-					result.destination.DestinationAirportCode, result.destination.DestinationName, result.destination.CountryName, cabinName,
-					outboundFlights[0].Time, outboundFlights[0].Seats, inboundFlights[0].Time, inboundFlights[0].Seats,
+					result.destination.DestinationAirportCode,
+					result.destination.DestinationName,
+					result.destination.CountryName,
+					cabinName,
+					outboundFlights[0].Time, outboundFlights[0].Seats,
+					inboundFlights[0].Time, inboundFlights[0].Seats,
 				)
 			}
 		}

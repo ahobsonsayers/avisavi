@@ -34,6 +34,7 @@ linters:
       disabled-checks:
         - commentedOutCode
         - hugeParam
+        - rangeValCopy
         - whyNoLint
 
     revive:
@@ -90,3 +91,10 @@ linters:
     # Exclusions: https://golangci-lint.run/docs/linters/false-positives
     presets:
       - std-error-handling
+    rules:
+      # AuthData / AuthDataFilePath are deliberate project names, not stutters.
+      - linters: [revive]
+        text: stutters
+      # testToken is a fixed JWT; splitting it would only hurt readability.
+      - linters: [revive]
+        path: pkg/gavios/client_test.go
