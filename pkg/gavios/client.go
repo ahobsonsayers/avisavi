@@ -1,4 +1,4 @@
-package avios
+package gavios
 
 import (
 	"context"
