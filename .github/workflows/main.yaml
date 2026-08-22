@@ -43,7 +43,10 @@ jobs:
           if [ "${{ matrix.goos }}" = "windows" ]; then ext=".exe"; fi
           name="avisavi-${{ matrix.goos }}-${{ matrix.goarch }}$ext"
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} CGO_ENABLED=0 \
-            go build -o "bin/$name" ./cmd/avisavi
+            go build -ldflags "-X github.com/ahobsonsayers/avisavi/pkg/gavios/auth.defaultClientID=$AVIOS_AUTH_CLIENT_ID" \
+            -o "bin/$name" ./cmd/avisavi
+        env:
+          AVIOS_AUTH_CLIENT_ID: ${{ secrets.AVIOS_AUTH_CLIENT_ID }}
 
       - name: Upload binary
         uses: actions/upload-artifact@v4

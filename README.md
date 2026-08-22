@@ -45,9 +45,25 @@ Add `--json` to any command for raw JSON output.
 
 ## Configuration
 
-| Variable | Description |
-|----------|-------------|
-| `AVIOS_AUTH_CLIENT_ID` | Auth0 client ID used during login. Can be overridden per-run with `--client-id`. |
+Prebuilt binaries from the releases page work out of the box — no configuration needed.
+
+When running from source (`go run ./cmd/avisavi`), you must provide an Auth0 client ID, as there is nothing embedded yet:
+
+```sh
+export AVIOS_AUTH_CLIENT_ID=client-id
+```
+
+The client ID is resolved in this order:
+
+1. `--client-id` flag (any run)
+2. `AVIOS_AUTH_CLIENT_ID` env var (runtime)
+3. Value embedded into the binary at build time (releases/CI only)
+
+So a built binary works with no env var if the client ID was embedded via `-ldflags` when it was compiled:
+
+```sh
+go build -ldflags "-X github.com/ahobsonsayers/avisavi/pkg/gavios/auth.defaultClientID=$AVIOS_AUTH_CLIENT_ID" ./cmd/avisavi
+```
 
 > [!NOTE]
 > The Avios client ID is not provided here due to liability concerns, but it's a fixed,

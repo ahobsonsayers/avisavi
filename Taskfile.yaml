@@ -27,7 +27,10 @@ tasks:
 
   build:
     cmds:
-      - go build -v -o ./bin/avisavi ./cmd/avisavi
+      - |
+        go build -v -o ./bin/avisavi \
+          -ldflags "-X github.com/ahobsonsayers/avisavi/pkg/gavios/auth.defaultClientID=$AVIOS_AUTH_CLIENT_ID" \
+          ./cmd/avisavi
 
   run:
     cmds:

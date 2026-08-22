@@ -15,14 +15,24 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// defaultClientID is embedded at build time via:
+// -ldflags "-X github.com/ahobsonsayers/avisavi/pkg/gavios/auth.defaultClientID=<id>".
+// It is a fallback for binaries that lack the AVIOS_AUTH_CLIENT_ID env var at runtime.
+var defaultClientID string
+
 type Client struct {
 	ClientID     string
 	CallbackPort int
 }
 
 func NewClient() Client {
+	clientID := os.Getenv("AVIOS_AUTH_CLIENT_ID")
+	if clientID == "" {
+		clientID = defaultClientID
+	}
+
 	return Client{
-		ClientID:     os.Getenv("AVIOS_AUTH_CLIENT_ID"),
+		ClientID:     clientID,
 		CallbackPort: 8484,
 	}
 }
