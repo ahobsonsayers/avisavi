@@ -16,7 +16,6 @@ func (c *Client) Balance(ctx context.Context) (Balance, error) {
 		ctx,
 		"/member/v1/balance",
 		nil,
-		authBearer,
 		&balance,
 	)
 	if err != nil {

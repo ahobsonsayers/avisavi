@@ -15,13 +15,6 @@ import (
 
 const baseURL = "https://api.rewardsapp.iagl.digital"
 
-type authMode string
-
-const (
-	authRaw    authMode = ""        // spend/v3, whitelabel/v3: raw JWT, no Bearer prefix
-	authBearer authMode = "Bearer " // member/v1, collect/v1, alerts/v1, etc.
-)
-
 type Client struct {
 	httpClient *resty.Client
 	authData   *auth.AuthData
@@ -51,10 +44,10 @@ func (c *Client) MembershipNumber() (string, error) {
 	return c.authData.MembershipNumber()
 }
 
-func (c *Client) get(ctx context.Context, path string, query url.Values, authMode authMode, outValue any) error {
+func (c *Client) get(ctx context.Context, path string, query url.Values, outValue any) error {
 	request := c.httpClient.R().
 		SetContext(ctx).
-		SetHeader("Authorization", string(authMode)+c.authData.AccessToken)
+		SetHeader("Authorization", "Bearer "+c.authData.AccessToken)
 
 	if len(query) > 0 {
 		request.SetQueryParamsFromValues(query)

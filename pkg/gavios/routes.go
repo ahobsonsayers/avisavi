@@ -10,8 +10,8 @@ import (
 type Routes struct {
 	// Origins is the set of origin airports and their bookable destinations.
 	Origins []Origin `json:"origins"`
-	// BroadSearchCategories groups destinations by high-level theme (e.g. city, beach).
-	BroadSearchCategories []Category `json:"broadSearchCategories"`
+	// BroadSearchGroups groups destinations by continent/area with price ranges.
+	BroadSearchGroups []Category `json:"broadSearchGroups"`
 }
 
 // Origin is a departure airport and every destination bookable from it.
@@ -25,11 +25,11 @@ type Origin struct {
 // Destination is a reward destination reachable from an origin.
 type Destination struct {
 	// DestinationAirportCode is the IATA code of the destination airport.
-	DestinationAirportCode string `json:"destinationAirportCode"`
+	DestinationAirportCode string `json:"airportCode"`
 	// DestinationAirportName is the full name of the destination airport.
-	DestinationAirportName string `json:"destinationAirportName"`
+	DestinationAirportName string `json:"airportName"`
 	// DestinationName is the name of the city the airport serves.
-	DestinationName string `json:"destinationName"`
+	DestinationName string `json:"name"`
 	// CountryCode is the ISO country code of the destination.
 	CountryCode string `json:"countryCode"`
 	// CountryName is the full country name of the destination.
@@ -81,9 +81,8 @@ func (c *Client) Routes(ctx context.Context, originAirport string, adults int, o
 	var routes Routes
 	err := c.get(
 		ctx,
-		"/spend/v3/programmes/BAEC/GB/flight/routes",
+		"/spend/v1/flight/routes",
 		query,
-		authRaw,
 		&routes,
 	)
 	if err != nil {
