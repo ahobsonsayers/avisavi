@@ -11,16 +11,16 @@ import (
 )
 
 func TestAuthData_MembershipNumber(t *testing.T) {
-	// JWT with claim: {"https://avios.com/membership_id":"05608372"}
+	// JWT with claim: {"https://avios.com/membership_id":"01234567"}
 	// Header: {"alg":"HS256","typ":"JWT"}
 	header := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-	payload := "eyJodHRwczovL2F2aW9zLmNvbS9tZW1iZXJzaGlwX2lkIjoiMDU2MDgzNzIifQ"
+	payload := "eyJodHRwczovL2F2aW9zLmNvbS9tZW1iZXJzaGlwX2lkIjoiMDEyMzQ1NjcifQ"
 	token := header + "." + payload + ".ZmFrZXNpZ25hdHVyZQ"
 
 	authData := &AuthData{AccessToken: token}
 	membershipNumber, err := authData.MembershipNumber()
 	require.NoError(t, err)
-	assert.Equal(t, "05608372", membershipNumber)
+	assert.Equal(t, "01234567", membershipNumber)
 }
 
 func TestAuthData_MembershipNumber_Invalid(t *testing.T) {
