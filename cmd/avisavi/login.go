@@ -89,7 +89,7 @@ func loginAction(ctx context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func loginCleanupAction(ctx context.Context, cmd *cli.Command) error {
+func loginCleanupAction(_ context.Context, _ *cli.Command) error {
 	browserDir := cloak.CacheDir()
 
 	_, err := os.Stat(browserDir)

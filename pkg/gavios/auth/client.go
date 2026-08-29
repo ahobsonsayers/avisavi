@@ -164,7 +164,7 @@ func getAuthCodeManually(authURL string) (string, error) {
 
 	inputString = strings.TrimSpace(inputString)
 	if inputString == "" {
-		return "", fmt.Errorf("input is empty")
+		return "", errors.New("input is empty")
 	}
 
 	parsedUrl, err := url.Parse(inputString)
