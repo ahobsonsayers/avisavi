@@ -6,6 +6,7 @@ import (
 	"io"
 	"math/rand/v2"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -70,26 +71,17 @@ func searchAction(ctx context.Context, cmd *cli.Command) error {
 }
 
 func searchDestinations(ctx context.Context, client *gavios.Client, origin string, adults int) []searchResult {
-	routes, err := client.Routes(
-		ctx,
-		origin,
-		adults,
-		false,
-	)
+	routes, err := client.Routes(ctx, adults, false)
 	if err != nil {
 		return nil
 	}
 
-	// Flatten all origins into one destination list, deduped by airport code.
-	capacity := 0
-	for _, originAirport := range routes.Origins {
-		capacity += len(originAirport.Destinations)
+	filtered, err := routes.RoutesFromOrigin(origin)
+	if err != nil {
+		return nil
 	}
 
-	destinations := make([]gavios.Destination, 0, capacity)
-	for _, originAirport := range routes.Origins {
-		destinations = append(destinations, originAirport.Destinations...)
-	}
+	destinations := filtered.Origins[0].Destinations
 
 	destinations = lo.UniqBy(
 		destinations,
@@ -130,9 +122,8 @@ func renderSearchResults(w io.Writer, results []searchResult, outbound, returnDa
 
 	fmt.Fprint(writer, "DEST\tNAME\tCOUNTRY\tCABIN\tOUT\tSEATS\tRET\tSEATS\n")
 
-	// The API keys flights by full timestamp; match on the requested date.
-	outboundKey := outbound + "T00:00:00"
-	inboundKey := returnDate + "T00:00:00"
+	// The API keys flights by date but each flight's own date field may
+	// differ from the key, so match on the requested date prefix.
 
 	for _, result := range results {
 		cabins := result.availability.CabinAvailability
@@ -144,8 +135,8 @@ func renderSearchResults(w io.Writer, results []searchResult, outbound, returnDa
 		}
 
 		for cabinName, cabinData := range cabins {
-			outboundFlights := filterSeats(cabinData.Outbound.AvailableFlights[outboundKey], minSeats)
-			inboundFlights := filterSeats(cabinData.Inbound.AvailableFlights[inboundKey], minSeats)
+			outboundFlights := filterSeats(flightsOnDate(cabinData.Outbound.Flights, outbound), minSeats)
+			inboundFlights := filterSeats(flightsOnDate(cabinData.Inbound.Flights, returnDate), minSeats)
 			if len(outboundFlights) > 0 && len(inboundFlights) > 0 {
 				fmt.Fprintf(
 					writer, "%s\t%s\t%s\t%s\t%s\t%d\t%s\t%d\n",
@@ -167,4 +158,17 @@ func filterSeats(flights []gavios.Flight, minSeats int) []gavios.Flight {
 	return lo.Filter(flights, func(flight gavios.Flight, _ int) bool {
 		return flight.Seats >= minSeats
 	})
+}
+
+// flightsOnDate returns flights departing on the given YYYY-MM-DD date.
+func flightsOnDate(flightsPerDate map[string][]gavios.Flight, date string) []gavios.Flight {
+	var matches []gavios.Flight
+	for _, flights := range flightsPerDate {
+		for _, flight := range flights {
+			if strings.HasPrefix(flight.Date, date) {
+				matches = append(matches, flight)
+			}
+		}
+	}
+	return matches
 }
