@@ -1,15 +1,13 @@
 package auth
 
 import (
+	"bufio"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
-	"net/http"
+	"net/url"
 	"os"
-	"time"
+	"strings"
 
 	"github.com/pkg/browser"
 	"golang.org/x/oauth2"
@@ -20,9 +18,14 @@ import (
 // It is a fallback for binaries that lack the AVIOS_AUTH_CLIENT_ID env var at runtime.
 var defaultClientID string
 
+const (
+	auth0Domain = "accounts.britishairways.com"
+	audience    = "https://api.avios.com/"
+	redirectURI = "com.usablenet.ba.avios://accounts.britishairways.com/android/com.usablenet.ba.avios/callback"
+)
+
 type Client struct {
-	ClientID     string
-	CallbackPort int
+	ClientID string
 }
 
 func NewClient() Client {
@@ -32,76 +35,73 @@ func NewClient() Client {
 	}
 
 	return Client{
-		ClientID:     clientID,
-		CallbackPort: 8484,
+		ClientID: clientID,
 	}
 }
 
-// Login starts the OAuth2 PKCE flow, waiting for the browser callback.
-func (c Client) Login(ctx context.Context) (*AuthData, error) {
+type AuthMode int
+
+const (
+	// Browser uses an installed Chromium browser to login.
+	// If Chromium is not found, login fails.
+	Browser AuthMode = iota
+
+	// BrowserWithDownload uses an installed Chromium browser to login,
+	// and if Chromium is not found, it is downloaded and used
+	BrowserWithDownload
+
+	// Manual logs in using manual paste of redirect uri
+	Manual
+)
+
+func (c Client) Login(ctx context.Context, authMode AuthMode) (*AuthData, error) {
 	oauthConfig := c.oauth2Config()
 	verifier := oauth2.GenerateVerifier()
-	state := randHex(16)
 
 	authURL := oauthConfig.AuthCodeURL(
-		state,
+		"",
 		oauth2.AccessTypeOffline,
-		oauth2.SetAuthURLParam("audience", "https://api.avios.com/"),
+		oauth2.SetAuthURLParam("audience", audience),
 		oauth2.S256ChallengeOption(verifier),
 	)
 
-	// Local callback server captures the auth code and state from the redirect.
-	codeChan := make(chan string, 1)
-	errChan := make(chan error, 1)
-	authHandlerFunc := func(response http.ResponseWriter, request *http.Request) {
-		query := request.URL.Query()
-		if query.Get("state") != state {
-			http.Error(response, "state mismatch", http.StatusBadRequest)
-			errChan <- errors.New("oauth state mismatch")
-			return
+	var authcode string
+	var err error
+	if authMode == Manual {
+		authcode, err = getAuthCodeManually(authURL)
+	} else {
+		// Get browser path
+		var browserPath string
+		if authMode == BrowserWithDownload {
+			browserPath, err = downloadBrowser()
+			if err != nil {
+				return nil, err
+			}
+		} else { // Browser
+			browserPath, err = findBrowser()
+			if err != nil {
+				return nil, err
+			}
 		}
-
-		codeChan <- query.Get("code")
-		fmt.Fprintln(response, "<h1>Done! You can close this tab.</h1>")
+		authcode, err = getAuthCodeViaBrowser(ctx, browserPath, authURL)
 	}
-
-	authServer := &http.Server{
-		Addr:    fmt.Sprintf(":%d", c.CallbackPort),
-		Handler: http.HandlerFunc(authHandlerFunc),
-	}
-
-	// Start auth redirect server
-	go func() { _ = authServer.ListenAndServe() }()
-	defer func() { _ = authServer.Shutdown(ctx) }()
-
-	log.Println("Opening browser for login...")
-	log.Printf("If it doesn't open, visit:\n%s\n", authURL)
-	err := browser.OpenURL(authURL)
 	if err != nil {
-		log.Printf("could not open browser: %v — visit the URL above manually\n", err)
+		return nil, err
+	}
+	if authcode == "" {
+		return nil, errors.New("no auth code captured")
 	}
 
-	// Exchange the auth code for tokens, or fail on mismatch/timeout.
-	var token *oauth2.Token
-	select {
-	case code := <-codeChan:
-		var err error
-		token, err = oauthConfig.Exchange(ctx, code, oauth2.VerifierOption(verifier))
-		if err != nil {
-			return nil, fmt.Errorf("token exchange: %w", err)
-		}
-
-	case err := <-errChan:
-		return nil, err
-
-	case <-time.After(5 * time.Minute):
-		return nil, errors.New("login timed out waiting for callback")
+	token, err := oauthConfig.Exchange(ctx, authcode, oauth2.VerifierOption(verifier))
+	if err != nil {
+		return nil, fmt.Errorf("failed to exchange code for token: %w", err)
 	}
 
 	authData := &AuthData{
 		AccessToken:  token.AccessToken,
 		RefreshToken: token.RefreshToken,
 	}
+
 	_, err = authData.MembershipNumber()
 	if err != nil {
 		return nil, fmt.Errorf("decoding membership from token: %w", err)
@@ -139,21 +139,55 @@ func (c Client) Refresh(ctx context.Context, authData *AuthData) (*AuthData, err
 func (c Client) oauth2Config() *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:    c.ClientID,
-		RedirectURL: fmt.Sprintf("http://localhost:%d/callback", c.CallbackPort),
+		RedirectURL: redirectURI,
 		Scopes: []string{
 			"openid", "profile", "email",
 			"read:transaction", "read:member", "read:account",
 			"offline_access",
 		},
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  "https://accounts.britishairways.com/authorize",
-			TokenURL: "https://accounts.britishairways.com/oauth/token",
+			AuthURL:  "https://" + auth0Domain + "/authorize",
+			TokenURL: "https://" + auth0Domain + "/oauth/token",
 		},
 	}
 }
 
-func randHex(n int) string {
-	randomBytes := make([]byte, n)
-	_, _ = rand.Read(randomBytes)
-	return hex.EncodeToString(randomBytes)
+// getAuthCodeManually opens the system browser to the authorize URL and
+// prompts the user to paste the deep link redirect uri after logging in.
+func getAuthCodeManually(authURL string) (string, error) {
+	err := browser.OpenURL(authURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to open browser: %w", err)
+	}
+
+	fmt.Println("After logging in, the browser will attempt to redirect and fail.")
+	fmt.Println("This may look like the browser does nothing after clicking login.")
+	fmt.Println()
+	fmt.Println("If the browser redirects, copy the URL from the address bar.")
+	fmt.Println("If it does not redirect, open DevTools with F12, go to the Network tab,")
+	fmt.Println("click login again, and copy the URL from the 'Location' header of the")
+	fmt.Println("request that fires.")
+	fmt.Println()
+	fmt.Println("In either case the URL will start with com.usablenet.ba.avios://...")
+	fmt.Println()
+	fmt.Print("Paste the URL here: ")
+
+	inputReader := bufio.NewReader(os.Stdin)
+	inputString, err := inputReader.ReadString('\n')
+	if err != nil {
+		return "", fmt.Errorf("failed to read input: %w", err)
+	}
+
+	inputString = strings.TrimSpace(inputString)
+	if inputString == "" {
+		return "", fmt.Errorf("input is empty")
+	}
+
+	parsedUrl, err := url.Parse(inputString)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse input as a url: %w", err)
+	}
+
+	authCode := parsedUrl.Query().Get("code")
+	return authCode, nil
 }

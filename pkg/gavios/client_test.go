@@ -50,9 +50,9 @@ func TestClient_AuthHeader(t *testing.T) {
 
 			require.NotNil(t, captured)
 			assert.Equal(t, "Bearer "+testToken, captured.Header.Get("Authorization"))
-		assert.Equal(t, "BAEC", captured.Header.Get("x-api-programme"))
-		assert.True(t, strings.HasPrefix(captured.Header.Get("x-auth-client-id"), "BAEC-"))
-		assert.Equal(t, "unused", captured.Header.Get("x-api-key"))
+			assert.Equal(t, "BAEC", captured.Header.Get("x-api-programme"))
+			assert.True(t, strings.HasPrefix(captured.Header.Get("x-auth-client-id"), "BAEC-"))
+			assert.Equal(t, "unused", captured.Header.Get("x-api-key"))
 		})
 	}
 }
