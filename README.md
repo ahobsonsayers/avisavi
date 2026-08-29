@@ -1,5 +1,9 @@
 # avisavi
 
+<p align="center">
+  <img src="assets/logo.png" alt="avisavi logo">
+</p>
+
 A CLI for searching Avios reward flights from the terminal.
 
 Search reward flight availability, browse routes across cabin classes, and check your balance.
