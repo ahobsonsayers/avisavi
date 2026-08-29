@@ -63,53 +63,47 @@ func availabilityAction(ctx context.Context, cmd *cli.Command) error {
 }
 
 func renderAvailability(w io.Writer, availability gavios.Availability) error {
-	high := availability.HighSeatAvailabilityThreshold
-	med := availability.MediumAvailabilityThreshold
-	low := availability.LowSeatAvailabilityThreshold
-
 	for cabin, cabinData := range availability.CabinAvailability {
 		fmt.Fprintf(w, "\n=== %s ===\n", cabin)
-		renderDirection(w, "outbound", cabinData.Outbound, high, med, low)
-		renderDirection(w, "inbound", cabinData.Inbound, high, med, low)
+		renderDirection(w, "outbound", cabinData.Outbound)
+		renderDirection(w, "inbound", cabinData.Inbound)
 	}
 
 	return nil
 }
 
-func renderDirection(w io.Writer, name string, direction gavios.Direction, high, med, low int) {
-	if len(direction.AvailableFlights) == 0 {
+func renderDirection(w io.Writer, name string, direction gavios.Direction) {
+	if len(direction.Flights) == 0 {
 		return
 	}
 
 	// Iterate dates in order so output is stable and chronological.
 	fmt.Fprintf(w, "\n  %s:\n", name)
-	for _, date := range slices.Sorted(maps.Keys(direction.AvailableFlights)) {
-		for _, flight := range direction.AvailableFlights[date] {
-			route := "direct"
-			if !flight.Direct {
-				route = "1stop"
-			}
 
+	dates := maps.Keys(direction.Flights)
+	sortedDates := slices.Sorted(dates)
+	for _, date := range sortedDates {
+		for _, flight := range direction.Flights[date] {
 			fmt.Fprintf(
-				w, "    %s %s seats=%d %s %s [%s]\n",
+				w, "    %s %s seats=%d %s [%s]\n",
 				flight.Date[:10],
 				flight.Time,
 				flight.Seats,
 				flight.Carrier,
-				route,
-				seatColour(flight.Seats, high, med, low),
+				seatColour(flight.Seats),
 			)
 		}
 	}
 }
 
-func seatColour(seats, high, med, low int) string {
+// Seat availability colour bands (the API no longer reports thresholds).
+func seatColour(seats int) string {
 	switch {
-	case seats >= high:
+	case seats >= 9:
 		return "GREEN"
-	case seats >= med:
+	case seats >= 5:
 		return "YELLOW"
-	case seats >= low:
+	case seats >= 1:
 		return "RED"
 	default:
 		return "---"

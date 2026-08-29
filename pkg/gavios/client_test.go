@@ -50,14 +50,14 @@ func TestClient_AuthHeader(t *testing.T) {
 
 			require.NotNil(t, captured)
 			assert.Equal(t, "Bearer "+testToken, captured.Header.Get("Authorization"))
-		assert.Equal(t, "BAEC", captured.Header.Get("x-api-programme"))
-		assert.True(t, strings.HasPrefix(captured.Header.Get("x-auth-client-id"), "BAEC-"))
-		assert.Equal(t, "unused", captured.Header.Get("x-api-key"))
+			assert.Equal(t, "BAEC", captured.Header.Get("x-api-programme"))
+			assert.True(t, strings.HasPrefix(captured.Header.Get("x-auth-client-id"), "BAEC-"))
+			assert.Equal(t, "unused", captured.Header.Get("x-api-key"))
 		})
 	}
 }
 
-const routesResp = `{"origins":[{"originAirportCode":"LON","destinations":[` +
+const routesResp = `{"origins":[{"airportCode":"LON","destinations":[` +
 	`{"airportCode":"ABV","name":"Abuja","countryName":"Nigeria",` +
 	`"aviosPerCabinClass":{"Economy":{"min":100,"max":200}}}]}],"broadSearchGroups":[]}`
 
@@ -73,10 +73,10 @@ func TestClient_Routes(t *testing.T) {
 			return httpmock.NewStringResponse(200, routesResp), nil
 		})
 
-	routes, err := client.Routes(context.Background(), "LON", 1, false)
+	routes, err := client.Routes(context.Background(), 1, false)
 	require.NoError(t, err)
 	require.Len(t, routes.Origins, 1)
-	assert.Equal(t, "LON", routes.Origins[0].OriginAirportCode)
+	assert.Equal(t, "LON", routes.Origins[0].AirportCode)
 	require.Len(t, routes.Origins[0].Destinations, 1)
 	destination := routes.Origins[0].Destinations[0]
 	assert.Equal(t, "ABV", destination.DestinationAirportCode)
@@ -85,10 +85,21 @@ func TestClient_Routes(t *testing.T) {
 
 	require.NotNil(t, captured)
 	query := captured.URL.Query()
-	assert.Equal(t, "LON", query.Get("OriginAirport"))
 	assert.Equal(t, "true", query.Get("ByAirport"))
 	assert.Equal(t, "1", query.Get("Adults"))
 	assert.Equal(t, "false", query.Get("OneWay"))
+
+	filtered, err := routes.RoutesFromOrigin("lon")
+	require.NoError(t, err)
+	require.Len(t, filtered.Origins, 1)
+	assert.Equal(t, "LON", filtered.Origins[0].AirportCode)
+
+	all, err := routes.RoutesFromOrigin("")
+	require.NoError(t, err)
+	assert.Len(t, all.Origins, len(routes.Origins))
+
+	_, err = routes.RoutesFromOrigin("JFK")
+	assert.Error(t, err)
 }
 
 const availabilityJSON = `{"availabilityPerCabin":{"Economy":{"outbound":{"flightsPerDate":{"2026-06-23T00:00:00":[{"date":"2026-06-23T22:30:00","time":"22:30","seats":9,"carrier":"BA"}]}},"inbound":{"flightsPerDate":{}}}}}`
