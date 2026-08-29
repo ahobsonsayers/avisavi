@@ -81,7 +81,7 @@ func AuthDataFilePath() string {
 		if err != nil {
 			return ""
 		}
-		return filepath.Join(homeDir, ".config")
+		configDir = filepath.Join(homeDir, ".config")
 	}
 
 	return filepath.Join(configDir, "avisavi", "auth.json")
