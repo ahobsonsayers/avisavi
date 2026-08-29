@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/ahobsonsayers/avisavi/pkg/gavios/auth"
 	"github.com/google/uuid"
@@ -33,6 +34,10 @@ func NewClient(authData *auth.AuthData) *Client {
 		"x-api-key":        "unused",
 		"accept":           "application/json",
 	})
+	restyClient.SetRetryCount(5)
+	restyClient.SetRetryWaitTime(100 * time.Millisecond)
+	restyClient.SetRetryMaxWaitTime(2 * time.Second)
+	restyClient.AddRetryConditions(resty.RetryConditionStatusTooManyRequests)
 
 	return &Client{
 		httpClient: restyClient,

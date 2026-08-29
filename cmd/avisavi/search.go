@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math/rand/v2"
 	"os"
 	"strings"
 	"text/tabwriter"
-	"time"
 
 	"github.com/ahobsonsayers/avisavi/pkg/gavios"
 	"github.com/samber/lo"
@@ -21,8 +19,7 @@ var searchCmd = &cli.Command{
 	Description: `Search all reward destinations from an origin for available seats
 on the given outbound and return dates.
 
-This fetches the route list, then checks availability for each destination
-(with a random 1-2s delay between requests to avoid rate limiting).
+This fetches the route list, then checks availability for each destination.
 
 Examples:
   avisavi search --origin LON --outbound 2026-09-09 --return 2026-09-13
@@ -102,9 +99,6 @@ func searchDestinations(ctx context.Context, client *gavios.Client, origin strin
 		if err != nil {
 			continue
 		}
-
-		// Random sleep to prevent being blocked
-		time.Sleep(time.Duration(1000+rand.IntN(1000)) * time.Millisecond)
 
 		results = append(
 			results,

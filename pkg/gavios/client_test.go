@@ -143,3 +143,23 @@ func TestNormalizeAirportCode(t *testing.T) {
 		assert.Error(t, err, "code %q should be rejected", bad)
 	}
 }
+
+func TestClient_RetryOn429(t *testing.T) {
+	client := testClient()
+	defer httpmock.DeactivateAndReset()
+
+	calls := 0
+	httpmock.RegisterResponder("GET",
+		"https://api.rewardsapp.iagl.digital/spend/v1/flight/allcabins",
+		func(req *http.Request) (*http.Response, error) {
+			calls++
+			if calls == 1 {
+				return httpmock.NewStringResponse(429, `{"message":"too many requests"}`), nil
+			}
+			return httpmock.NewStringResponse(200, availabilityJSON), nil
+		})
+
+	_, err := client.Availability(context.Background(), "LON", "ABV", false, 1)
+	require.NoError(t, err)
+	assert.Equal(t, 2, calls)
+}
