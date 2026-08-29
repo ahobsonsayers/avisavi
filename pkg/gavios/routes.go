@@ -19,6 +19,12 @@ type Routes struct {
 type Origin struct {
 	// AirportCode is the IATA code of the departure airport.
 	AirportCode string `json:"airportCode"`
+	// AirportName is the full name of the departure airport.
+	AirportName string `json:"airportName"`
+	// Name is the name of the city the airport serves.
+	Name string `json:"name"`
+	// CountryName is the full country name of the departure airport.
+	CountryName string `json:"countryName"`
 	// Destinations are the reward destinations reachable from this origin.
 	Destinations []Destination `json:"destinations"`
 }

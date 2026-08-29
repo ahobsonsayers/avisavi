@@ -59,9 +59,9 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 			business := destination.AviosPerCabinClass["Business"]
 			fmt.Fprintf(
 				writer,
-				"%s -> %s\t%s, %s\tEco %d-%d\tBus %d-%d\n",
-				originAirport.AirportCode, destination.DestinationAirportCode,
-				destination.DestinationName, destination.CountryName,
+				"%s (%s)\t->\t%s (%s)\tEconomy %d-%d\tBusiness %d-%d\n",
+				originAirport.Name, originAirport.AirportCode,
+				destination.DestinationName, destination.DestinationAirportCode,
 				economy.Min, economy.Max, business.Min, business.Max)
 		}
 	}
