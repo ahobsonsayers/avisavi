@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"maps"
 	"os"
-	"slices"
 
 	"github.com/ahobsonsayers/avisavi/pkg/gavios"
 	"github.com/urfave/cli/v3"
@@ -44,7 +42,7 @@ func availabilityAction(ctx context.Context, cmd *cli.Command) error {
 
 	origin := cmd.String("origin")
 	destination := cmd.String("destination")
-	availability, err := client.Availability(
+	routeFlights, err := client.RouteFlights(
 		ctx,
 		origin,
 		destination,
@@ -56,43 +54,49 @@ func availabilityAction(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	if cmd.Bool("json") {
-		return printJSON(availability)
+		return printJSON(routeFlights)
 	}
 
-	return renderAvailability(os.Stdout, availability)
+	return renderAvailability(os.Stdout, routeFlights)
 }
 
-func renderAvailability(w io.Writer, availability gavios.Availability) error {
-	for cabin, cabinData := range availability.CabinAvailability {
-		fmt.Fprintf(w, "\n=== %s ===\n", cabin)
-		renderDirection(w, "outbound", cabinData.Outbound)
-		renderDirection(w, "inbound", cabinData.Inbound)
+func renderAvailability(w io.Writer, routeFlights gavios.RouteFlights) error {
+	cabins := []struct {
+		name    string
+		flights gavios.TripFlights
+	}{
+		{"Economy", routeFlights.Economy},
+		{"Premium", routeFlights.Premium},
+		{"Business", routeFlights.Business},
+		{"First", routeFlights.First},
+	}
+
+	for _, cabin := range cabins {
+		fmt.Fprintf(w, "\n=== %s ===\n", cabin.name)
+		renderFlights(w, "outbound", cabin.flights.Outbound)
+		renderFlights(w, "inbound", cabin.flights.Inbound)
 	}
 
 	return nil
 }
 
-func renderDirection(w io.Writer, name string, direction gavios.Direction) {
-	if len(direction.Flights) == 0 {
+func renderFlights(w io.Writer, name string, flights []gavios.Flight) {
+	if len(flights) == 0 {
 		return
 	}
 
-	// Iterate dates in order so output is stable and chronological.
+	// Flights are already ordered by departure date after unmarshalling.
 	fmt.Fprintf(w, "\n  %s:\n", name)
 
-	dates := maps.Keys(direction.Flights)
-	sortedDates := slices.Sorted(dates)
-	for _, date := range sortedDates {
-		for _, flight := range direction.Flights[date] {
-			fmt.Fprintf(
-				w, "    %s %s seats=%d %s [%s]\n",
-				flight.Date[:10],
-				flight.Time,
-				flight.Seats,
-				flight.Carrier,
-				seatColour(flight.Seats),
-			)
-		}
+	for _, flight := range flights {
+		fmt.Fprintf(
+			w, "    %s %s seats=%d %s [%s]\n",
+			flight.Date[:10],
+			flight.Time,
+			flight.Seats,
+			flight.Carrier,
+			seatColour(flight.Seats),
+		)
 	}
 }
 

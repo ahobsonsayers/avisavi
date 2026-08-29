@@ -39,7 +39,7 @@ Examples:
 
 type searchResult struct {
 	destination  gavios.Destination
-	availability gavios.Availability
+	routeFlights gavios.RouteFlights
 }
 
 func searchAction(ctx context.Context, cmd *cli.Command) error {
@@ -57,11 +57,11 @@ func searchAction(ctx context.Context, cmd *cli.Command) error {
 
 	results := searchDestinations(ctx, client, origin, adults)
 	if cmd.Bool("json") {
-		availabilities := make([]gavios.Availability, 0, len(results))
+		allRouteFlights := make([]gavios.RouteFlights, 0, len(results))
 		for _, result := range results {
-			availabilities = append(availabilities, result.availability)
+			allRouteFlights = append(allRouteFlights, result.routeFlights)
 		}
-		return printJSON(availabilities)
+		return printJSON(allRouteFlights)
 	}
 
 	return renderSearchResults(os.Stdout, results, outbound, returnDate, cabin, minSeats)
@@ -89,7 +89,7 @@ func searchDestinations(ctx context.Context, client *gavios.Client, origin strin
 
 	results := make([]searchResult, 0, len(destinations))
 	for _, destination := range destinations {
-		availability, err := client.Availability(
+		routeFlights, err := client.RouteFlights(
 			ctx,
 			origin,
 			destination.DestinationAirportCode,
@@ -104,7 +104,7 @@ func searchDestinations(ctx context.Context, client *gavios.Client, origin strin
 			results,
 			searchResult{
 				destination:  destination,
-				availability: availability,
+				routeFlights: routeFlights,
 			},
 		)
 	}
@@ -120,17 +120,25 @@ func renderSearchResults(w io.Writer, results []searchResult, outbound, returnDa
 	// differ from the key, so match on the requested date prefix.
 
 	for _, result := range results {
-		cabins := result.availability.CabinAvailability
-		if cabin != "" {
-			cabins = map[string]gavios.CabinData{}
-			if cabinData, ok := result.availability.CabinAvailability[cabin]; ok {
-				cabins[cabin] = cabinData
-			}
+		cabins := []struct {
+			name    string
+			flights gavios.TripFlights
+		}{
+			{"Economy", result.routeFlights.Economy},
+			{"Premium", result.routeFlights.Premium},
+			{"Business", result.routeFlights.Business},
+			{"First", result.routeFlights.First},
 		}
 
-		for cabinName, cabinData := range cabins {
-			outboundFlights := filterSeats(flightsOnDate(cabinData.Outbound.Flights, outbound), minSeats)
-			inboundFlights := filterSeats(flightsOnDate(cabinData.Inbound.Flights, returnDate), minSeats)
+		for _, cabinTripFlights := range cabins {
+			if cabin != "" && cabinTripFlights.name != cabin {
+				continue
+			}
+
+			cabinName := cabinTripFlights.name
+			tripFlights := cabinTripFlights.flights
+			outboundFlights := filterSeats(flightsOnDate(tripFlights.Outbound, outbound), minSeats)
+			inboundFlights := filterSeats(flightsOnDate(tripFlights.Inbound, returnDate), minSeats)
 			if len(outboundFlights) > 0 && len(inboundFlights) > 0 {
 				fmt.Fprintf(
 					writer, "%s\t%s\t%s\t%s\t%s\t%d\t%s\t%d\n",
@@ -155,14 +163,14 @@ func filterSeats(flights []gavios.Flight, minSeats int) []gavios.Flight {
 }
 
 // flightsOnDate returns flights departing on the given YYYY-MM-DD date.
-func flightsOnDate(flightsPerDate map[string][]gavios.Flight, date string) []gavios.Flight {
+func flightsOnDate(flights []gavios.Flight, date string) []gavios.Flight {
 	var matches []gavios.Flight
-	for _, flights := range flightsPerDate {
-		for _, flight := range flights {
-			if strings.HasPrefix(flight.Date, date) {
-				matches = append(matches, flight)
-			}
+
+	for _, flight := range flights {
+		if strings.HasPrefix(flight.Date, date) {
+			matches = append(matches, flight)
 		}
 	}
+
 	return matches
 }

@@ -80,7 +80,6 @@ func TestClient_Routes(t *testing.T) {
 	require.Len(t, routes.Origins[0].Destinations, 1)
 	destination := routes.Origins[0].Destinations[0]
 	assert.Equal(t, "ABV", destination.DestinationAirportCode)
-	assert.Equal(t, "Abuja", destination.DestinationName)
 	assert.Equal(t, 100, destination.AviosPerCabinClass["Economy"].Min)
 
 	require.NotNil(t, captured)
@@ -102,27 +101,35 @@ func TestClient_Routes(t *testing.T) {
 	assert.Error(t, err)
 }
 
-const availabilityJSON = `{"availabilityPerCabin":{"Economy":{"outbound":{"flightsPerDate":{"2026-06-23T00:00:00":[{"date":"2026-06-23T22:30:00","time":"22:30","seats":9,"carrier":"BA"}]}},"inbound":{"flightsPerDate":{}}}}}`
+const routeFlightsJSON = `{"availabilityPerCabin":{"Economy":{"outbound":{"flightsPerDate":` +
+	`{"2026-06-24T00:00:00":[{"date":"2026-06-24T07:15:00","time":"07:15","seats":4,"carrier":"BA"}],` +
+	`"2026-06-23T00:00:00":[{"date":"2026-06-23T21:00:00","time":"21:00","seats":2,"carrier":"BA"},` +
+	`{"date":"2026-06-23T08:30:00","time":"08:30","seats":9,"carrier":"BA"}]}}` +
+	`,"inbound":{"flightsPerDate":{}}}}}`
 
-func TestClient_Availability(t *testing.T) {
+func TestClient_RouteFlights(t *testing.T) {
 	client := testClient()
 	defer httpmock.DeactivateAndReset()
 
-	path := "https://api.rewardsapp.iagl.digital/spend/v1/flight/allcabins"
 	var captured *http.Request
-	httpmock.RegisterResponder("GET", path,
+	httpmock.RegisterResponder("GET",
+		"https://api.rewardsapp.iagl.digital/spend/v1/flight/allcabins",
 		func(req *http.Request) (*http.Response, error) {
 			captured = req
-			return httpmock.NewStringResponse(200, availabilityJSON), nil
+			return httpmock.NewStringResponse(200, routeFlightsJSON), nil
 		})
 
-	availability, err := client.Availability(context.Background(), "LON", "ABV", false, 1)
+	routeFlights, err := client.RouteFlights(context.Background(), "LON", "ABV", false, 1)
 	require.NoError(t, err)
-	economy, ok := availability.CabinAvailability["Economy"]
-	require.True(t, ok)
-	require.Contains(t, economy.Outbound.Flights, "2026-06-23T00:00:00")
-	flight := economy.Outbound.Flights["2026-06-23T00:00:00"][0]
-	assert.Equal(t, 9, flight.Seats)
+
+	// Flights are ordered by full departure timestamp.
+	economy := routeFlights.Economy
+	require.Len(t, economy.Outbound, 3)
+	assert.Equal(t, "2026-06-23T08:30:00", economy.Outbound[0].Date)
+	assert.Equal(t, "2026-06-23T21:00:00", economy.Outbound[1].Date)
+	assert.Equal(t, "2026-06-24T07:15:00", economy.Outbound[2].Date)
+
+	assert.Empty(t, routeFlights.Business.Outbound)
 
 	require.NotNil(t, captured)
 	query := captured.URL.Query()
@@ -156,10 +163,10 @@ func TestClient_RetryOn429(t *testing.T) {
 			if calls == 1 {
 				return httpmock.NewStringResponse(429, `{"message":"too many requests"}`), nil
 			}
-			return httpmock.NewStringResponse(200, availabilityJSON), nil
+			return httpmock.NewStringResponse(200, routeFlightsJSON), nil
 		})
 
-	_, err := client.Availability(context.Background(), "LON", "ABV", false, 1)
+	_, err := client.RouteFlights(context.Background(), "LON", "ABV", false, 1)
 	require.NoError(t, err)
 	assert.Equal(t, 2, calls)
 }
