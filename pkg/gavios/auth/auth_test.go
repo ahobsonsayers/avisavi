@@ -3,6 +3,9 @@ package auth
 import (
 	"encoding/base64"
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -11,22 +14,45 @@ import (
 )
 
 func TestAuthData_MembershipNumber(t *testing.T) {
-	// JWT with claim: {"https://avios.com/membership_id":"05608372"}
+	// JWT with claim: {"https://avios.com/membership_id":"01234567"}
 	// Header: {"alg":"HS256","typ":"JWT"}
 	header := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-	payload := "eyJodHRwczovL2F2aW9zLmNvbS9tZW1iZXJzaGlwX2lkIjoiMDU2MDgzNzIifQ"
+	payload := "eyJodHRwczovL2F2aW9zLmNvbS9tZW1iZXJzaGlwX2lkIjoiMDEyMzQ1NjcifQ"
 	token := header + "." + payload + ".ZmFrZXNpZ25hdHVyZQ"
 
 	authData := &AuthData{AccessToken: token}
 	membershipNumber, err := authData.MembershipNumber()
 	require.NoError(t, err)
-	assert.Equal(t, "05608372", membershipNumber)
+	assert.Equal(t, "01234567", membershipNumber)
 }
 
 func TestAuthData_MembershipNumber_Invalid(t *testing.T) {
 	authData := &AuthData{AccessToken: "not-a-jwt"}
 	_, err := authData.MembershipNumber()
 	assert.Error(t, err)
+}
+
+func TestAuthDataFilePath(t *testing.T) {
+	authFilePath := AuthDataFilePath()
+
+	if runtime.GOOS == "darwin" {
+		homeDir, err := os.UserHomeDir()
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			filepath.Join(homeDir, ".config", "avisavi", "auth.json"),
+			authFilePath,
+		)
+		return
+	}
+
+	configDir, err := os.UserConfigDir()
+	require.NoError(t, err)
+	assert.Equal(
+		t,
+		filepath.Join(configDir, "avisavi", "auth.json"),
+		authFilePath,
+	)
 }
 
 func TestAuthData_NeedsRefresh(t *testing.T) {

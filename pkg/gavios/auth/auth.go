@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -67,13 +68,32 @@ func (a *AuthData) claims() (jwt.MapClaims, error) {
 
 // AuthDataFilePath returns the path to the auth config file.
 func AuthDataFilePath() string {
-	dir, _ := os.UserConfigDir()
-	return filepath.Join(dir, "avisavi", "auth.json")
+	var configDir string
+	var err error
+	if runtime.GOOS != "darwin" {
+		configDir, err = os.UserConfigDir()
+		if err != nil {
+			return ""
+		}
+	} else {
+		// Force MacOS to use .config
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		configDir = filepath.Join(homeDir, ".config")
+	}
+
+	return filepath.Join(configDir, "avisavi", "auth.json")
 }
 
 // Save persists the auth data to the config file.
 func (a *AuthData) Save() error {
 	authFilePath := AuthDataFilePath()
+	if authFilePath == "" {
+		return errors.New("could not determine config directory")
+	}
+
 	err := os.MkdirAll(filepath.Dir(authFilePath), 0o700)
 	if err != nil {
 		return err

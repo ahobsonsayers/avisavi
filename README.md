@@ -25,7 +25,8 @@ Prebuilt binaries for macOS (arm64/amd64), Linux, and Windows are available from
 
 ## Usage
 
-Log in first — the browser flow saves your session to `~/.config/avisavi/auth.json`:
+Log in first — the browser flow saves your session to `~/.config/avisavi/auth.json`
+(macOS/Linux) or `%AppData%\avisavi\auth.json` (Windows):
 
 ```sh
 avisavi login

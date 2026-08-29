@@ -1,6 +1,9 @@
 # Docs: https://taskfile.dev/#/usage
 version: "3"
 
+dotenv:
+  - .env
+
 tasks:
   format:
     cmds:
