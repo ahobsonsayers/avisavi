@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
+
+	"github.com/samber/lo"
 )
 
 // Routes lists reward destinations available from one or more origins.
@@ -112,4 +115,19 @@ func (routes Routes) RoutesFromOrigin(originAirport string) (Routes, error) {
 	}
 
 	return Routes{}, fmt.Errorf("origin %q not found in routes", origin)
+}
+
+// Regions broad regions categories across all destinations, sorted alphabetically.
+func (routes Routes) Regions() []string {
+	var regions []string
+	for _, origin := range routes.Origins {
+		for _, destination := range origin.Destinations {
+			regions = append(regions, destination.BroadSearchCategories...)
+		}
+	}
+
+	regions = lo.Uniq(regions)
+	slices.Sort(regions)
+
+	return regions
 }
