@@ -2,31 +2,36 @@
 
 A CLI for searching Avios reward flights from the terminal.
 
-Search reward flight availability, check your balance, and browse routes across
-cabin classes — without opening the Avios website. It talks to the same backend
-the official app uses, so prices and availability match what you'd see in the browser.
+Search reward flight availability, browse routes across cabin classes, and check your balance.
+
+It uses the same API as the official app, built via reverse engineering its logic.
 
 ## Features
 
-- **Balance** — check your Avios balance, including household accounts.
-- **Routes** — list every reward destination from an origin with Economy/Business price ranges.
-- **Availability** — seat counts per cabin (Economy, Premium, Business, First) for a route.
-- **Search** — scan all destinations for seats on your exact outbound and return dates.
+- **Availability** - seat counts per cabin (Economy, Premium, Business, First) for a route.
+- **Routes** - list every reward destination from an origin with Economy/Business price ranges.
+- **Search** - scan all destinations for seats on your exact outbound and return dates.
+- **Balance** - check your Avios balance, including household accounts.
+
+### Why not avios-cli
+
+There is a project called [avios-cli](https://github.com/alexechoi/avios-cli) that does a very similar thing to this project.
+
+It's a good project, but this CLI has several advantages, mainly:
+
+- This CLI does not require Python - it is written in Go and compiled to a single static binary, meaning you can simply download it and run it anywhere 🏃
+- This CLI uses the API used by the Avios app - `avios-cli` uses Playwright, which is slow and inefficient as well as very fragile. This CLI relies on the official API used by the Avios app, so it isn't hit by any of those drawbacks 🏃
 
 ## Install
 
-Build from source:
-
-```sh
-go build ./cmd/avisavi
-```
-
-Prebuilt binaries for macOS (arm64/amd64), Linux, and Windows are available from the GitHub releases.
+Download a prebuilt binary from the [latest release](https://github.com/ahobsonsayers/avisavi/releases/latest) - binaries are available for macOS, Linux, and Windows.
 
 ## Usage
 
-Log in first — the browser flow saves your session to `~/.config/avisavi/auth.json`
-(macOS/Linux) or `%AppData%\avisavi\auth.json` (Windows):
+> [!WARNING]
+> See the [disclaimer](#%EF%B8%8F-disclaimer) before going further
+
+Log in first - the browser flow saves your session to `~/.config/avisavi/auth.json` (macOS/Linux) or `%AppData%\avisavi\auth.json` (Windows):
 
 ```sh
 avisavi login
@@ -43,9 +48,17 @@ avisavi search --origin LON --outbound 2026-09-09 --return 2026-09-13
 
 Add `--json` to any command for raw JSON output.
 
-## Configuration
+## Build
 
-Prebuilt binaries from the releases page work out of the box — no configuration needed.
+Build from source:
+
+```sh
+go build ./cmd/avisavi
+```
+
+### Configuration
+
+Prebuilt binaries from the releases page work out of the box - no configuration needed.
 
 When running from source (`go run ./cmd/avisavi`), you must provide an Auth0 client ID, as there is nothing embedded yet:
 
@@ -66,20 +79,12 @@ go build -ldflags "-X github.com/ahobsonsayers/avisavi/pkg/gavios/auth.defaultCl
 ```
 
 > [!NOTE]
-> The Avios client ID is not provided here due to liability concerns, but it's a fixed,
-> unchanging value. You can extract it from the network tab of the official Avios site
-> or app.
+> The Avios client ID is not provided here due to liability concerns, but it's a fixed, unchanging value. You can extract it from the network tab of the official Avios site or app.
 
 ## ⚠️ Disclaimer
 
-This tool is **unofficial** and not affiliated with, endorsed by, or supported by
-Avios or its parent company. It interacts with Avios' internal APIs, which are not
-public and can change without notice.
+This tool is unofficial and not affiliated with, endorsed by, or supported by Avios.
 
-Using this tool may violate Avios' terms of service. **By using it you accept that
-your account could be suspended or banned, and that any Avios points held in that
-account could be lost — however unlikely.** I am not responsible for any loss of
-access, points, or account standing that results from using this software.
+Using it may violate Avios' terms of service - your account could be suspended or banned, and any points in it could be lost.
 
-Because login is required and misuse carries account risk, **use a dedicated burner
-account** rather than your primary one, and never share your credentials.
+I take no responsibility for any consequences of using this software. Please use a dedicated burner account, not your primary one.
