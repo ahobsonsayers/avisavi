@@ -3,6 +3,9 @@ package auth
 import (
 	"encoding/base64"
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -27,6 +30,29 @@ func TestAuthData_MembershipNumber_Invalid(t *testing.T) {
 	authData := &AuthData{AccessToken: "not-a-jwt"}
 	_, err := authData.MembershipNumber()
 	assert.Error(t, err)
+}
+
+func TestAuthDataFilePath(t *testing.T) {
+	authFilePath := AuthDataFilePath()
+
+	if runtime.GOOS == "darwin" {
+		homeDir, err := os.UserHomeDir()
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			filepath.Join(homeDir, ".config", "avisavi", "auth.json"),
+			authFilePath,
+		)
+		return
+	}
+
+	configDir, err := os.UserConfigDir()
+	require.NoError(t, err)
+	assert.Equal(
+		t,
+		filepath.Join(configDir, "avisavi", "auth.json"),
+		authFilePath,
+	)
 }
 
 func TestAuthData_NeedsRefresh(t *testing.T) {
