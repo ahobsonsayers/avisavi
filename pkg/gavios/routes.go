@@ -2,6 +2,7 @@ package gavios
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strconv"
 )
@@ -16,8 +17,8 @@ type Routes struct {
 
 // Origin is a departure airport and every destination bookable from it.
 type Origin struct {
-	// OriginAirportCode is the IATA code of the departure airport.
-	OriginAirportCode string `json:"originAirportCode"`
+	// AirportCode is the IATA code of the departure airport.
+	AirportCode string `json:"airportCode"`
 	// Destinations are the reward destinations reachable from this origin.
 	Destinations []Destination `json:"destinations"`
 }
@@ -60,17 +61,9 @@ type Category struct {
 	AviosPerCabinClass map[string]CabinPrice `json:"aviosPerCabinClass"`
 }
 
-func (c *Client) Routes(ctx context.Context, originAirport string, adults int, oneWay bool) (Routes, error) {
+// Routes returns reward destinations grouped by origin airport.
+func (c *Client) Routes(ctx context.Context, adults int, oneWay bool) (Routes, error) {
 	query := url.Values{}
-
-	if originAirport != "" {
-		var err error
-		originAirport, err = normalizeAirportCode(originAirport)
-		if err != nil {
-			return Routes{}, err
-		}
-		query.Set("OriginAirport", originAirport)
-	}
 	query.Set("ByAirport", "true")
 	query.Set("Adults", strconv.Itoa(adults))
 	query.Set("YoungAdults", "0")
@@ -89,4 +82,28 @@ func (c *Client) Routes(ctx context.Context, originAirport string, adults int, o
 		return Routes{}, err
 	}
 	return routes, nil
+}
+
+// RoutesFromOrigin filters routes to a single origin airport.
+// An empty origin returns all routes.
+func (routes Routes) RoutesFromOrigin(originAirport string) (Routes, error) {
+	if originAirport == "" {
+		return routes, nil
+	}
+
+	origin, err := normalizeAirportCode(originAirport)
+	if err != nil {
+		return Routes{}, err
+	}
+
+	for _, o := range routes.Origins {
+		if o.AirportCode == origin {
+			return Routes{
+				Origins:           []Origin{o},
+				BroadSearchGroups: routes.BroadSearchGroups,
+			}, nil
+		}
+	}
+
+	return Routes{}, fmt.Errorf("origin %q not found in routes", origin)
 }

@@ -11,8 +11,8 @@ import (
 
 var routesCmd = &cli.Command{
 	Name:  "routes",
-	Usage: "List reward-flight destinations with Avios price ranges",
-	Description: `Fetch all reward-flight destinations from an origin airport, showing
+	Usage: "List reward-flight routes with Avios price ranges",
+	Description: `Fetch reward-flight routes, showing
 the minimum and maximum Avios needed per cabin class.
 
 Examples:
@@ -20,7 +20,7 @@ Examples:
   avisavi routes --origin LON
   avisavi routes --origin JFK --adults 2 --one-way`,
 	Flags: []cli.Flag{
-		&cli.StringFlag{Name: "origin", Aliases: []string{"o"}, Value: "LON", Usage: "IATA origin code"},
+		&cli.StringFlag{Name: "origin", Aliases: []string{"o"}, Usage: "IATA origin code (omit for all origins)"},
 		&cli.IntFlag{Name: "adults", Aliases: []string{"a"}, Value: 1, Usage: "number of adults"},
 		&cli.BoolFlag{Name: "one-way", Usage: "one-way flights only"},
 		&cli.BoolFlag{Name: "json", Usage: "print raw JSON"},
@@ -36,10 +36,14 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 
 	routes, err := client.Routes(
 		ctx,
-		cmd.String("origin"),
 		cmd.Int("adults"),
 		cmd.Bool("one-way"),
 	)
+	if err != nil {
+		return err
+	}
+
+	routes, err = routes.RoutesFromOrigin(cmd.String("origin"))
 	if err != nil {
 		return err
 	}
@@ -56,7 +60,7 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 			fmt.Fprintf(
 				writer,
 				"%s -> %s\t%s, %s\tEco %d-%d\tBus %d-%d\n",
-				originAirport.OriginAirportCode, destination.DestinationAirportCode,
+				originAirport.AirportCode, destination.DestinationAirportCode,
 				destination.DestinationName, destination.CountryName,
 				economy.Min, economy.Max, business.Min, business.Max)
 		}
