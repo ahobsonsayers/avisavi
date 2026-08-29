@@ -55,7 +55,7 @@ func loginAction(ctx context.Context, cmd *cli.Command) error {
 		mode = auth.Manual
 	} else {
 		fmt.Println("Logging in using CloakBrowser.")
-		fmt.Println("If not found, it will be downloaded first (~200Mb - be patient).")
+		fmt.Println("If not found, it will be downloaded first (~200Mb - be patient)")
 		mode = auth.CloakBrowser
 	}
 
