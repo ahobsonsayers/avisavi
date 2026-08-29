@@ -42,15 +42,11 @@ func NewClient() Client {
 type AuthMode int
 
 const (
-	// Browser uses an installed Chromium browser to login.
-	// If Chromium is not found, login fails.
-	Browser AuthMode = iota
+	// CloakBrowser uses the CloakHQ stealth Chromium binary to login,
+	// it is downloaded if not already cached
+	CloakBrowser AuthMode = iota
 
-	// BrowserWithDownload uses an installed Chromium browser to login,
-	// and if Chromium is not found, it is downloaded and used
-	BrowserWithDownload
-
-	// Manual logs in using manual paste of redirect uri
+	// Manual logs in using manual paste of the redirect uri
 	Manual
 )
 
@@ -69,21 +65,9 @@ func (c Client) Login(ctx context.Context, authMode AuthMode) (*AuthData, error)
 	var err error
 	if authMode == Manual {
 		authcode, err = getAuthCodeManually(authURL)
-	} else {
-		// Get browser path
-		var browserPath string
-		if authMode == BrowserWithDownload {
-			browserPath, err = downloadBrowser()
-			if err != nil {
-				return nil, err
-			}
-		} else { // Browser
-			browserPath, err = findBrowser()
-			if err != nil {
-				return nil, err
-			}
-		}
-		authcode, err = getAuthCodeViaBrowser(ctx, browserPath, authURL)
+	} else { // CloakBrowser
+
+		authcode, err = getAuthCodeViaCloakBrowser(ctx, authURL)
 	}
 	if err != nil {
 		return nil, err

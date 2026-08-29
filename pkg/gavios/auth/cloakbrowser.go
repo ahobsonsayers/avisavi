@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	cloak "github.com/enowdev/cloak-go"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -15,29 +16,17 @@ import (
 
 const deepLinkPrefix = "com.usablenet.ba.avios://"
 
-// ErrBrowserNotFound is returned when no chromium based browser is found
-var ErrBrowserNotFound = errors.New("no chromium based browser found")
-
-// findBrowser returns the path to an available chromium based browser
-func findBrowser() (string, error) {
-	path, ok := launcher.LookPath()
-	if !ok || path == "" {
-		return "", ErrBrowserNotFound
+// getAuthCodeViaCloakBrowser uses cloakbrowser to get the auth code.
+// It does this by opening cloakbrowser on the BA login screen, waiting
+// for the user to login and then capturing the auth code on redirect.
+// cloakbrowser is required for stealth capability, if it is missing it is downloaded.
+func getAuthCodeViaCloakBrowser(ctx context.Context, authURL string) (string, error) {
+	// Get cloakbrowser path, downloading it if it is not found
+	browserPath, err := cloakBrowserPath(ctx)
+	if err != nil {
+		return "", err
 	}
 
-	return path, nil
-}
-
-// downloadBrowser downloads chromium and returns it path
-func downloadBrowser() (string, error) {
-	return launcher.NewBrowser().Get()
-}
-
-// getAuthCodeViaBrowser uses a browser to get the auth code.
-// It does this by opening a chroium browser on the BA login screen, waiting
-// for th user to login and then capturing the auth code on redirect.
-// Errors if browser cannot be found.
-func getAuthCodeViaBrowser(ctx context.Context, browserPath, authURL string) (string, error) {
 	// Run browser in fresh profile
 	controlURL := launcher.New().
 		Bin(browserPath).
@@ -59,7 +48,6 @@ func getAuthCodeViaBrowser(ctx context.Context, browserPath, authURL string) (st
 	// Start go routine that waits for the redirect, so
 	// it can capture the auth code in the url
 	var authCode string
-	var err error
 	go func() {
 		wait := page.EachEvent(
 			func(event *proto.NetworkRequestWillBeSent) bool {
@@ -99,4 +87,14 @@ func getAuthCodeViaBrowser(ctx context.Context, browserPath, authURL string) (st
 	default:
 		return "", loginCtx.Err()
 	}
+}
+
+// cloakBrowserPath gets the path of cloakbrowser, downloading it if it is missing
+func cloakBrowserPath(ctx context.Context) (string, error) {
+	browserPath, err := cloak.EnsureBinary(ctx, "")
+	if err != nil {
+		return "", fmt.Errorf("could not get cloakbrowser path: %w", err)
+	}
+
+	return browserPath, nil
 }
