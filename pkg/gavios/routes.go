@@ -15,8 +15,8 @@ type Routes struct {
 }
 
 type Airport struct {
-	Code        string `json:"airportCode"`
-	Name        string `json:"airportName"`
+	AirportCode string `json:"airportCode"`
+	AirportName string `json:"airportName"`
 	CountryCode string `json:"countryCode,omitempty"`
 	Country     string `json:"countryName"`
 	City        string `json:"name"`
@@ -86,7 +86,7 @@ func (routes *Routes) UnmarshalJSON(data []byte) error {
 			return err
 		}
 
-		routes.Airports[originAirport.Code] = originAirport
+		routes.Airports[originAirport.AirportCode] = originAirport
 
 		originRoutes := make(map[string]Route)
 		for _, destinationRaw := range origin.Destinations {
@@ -102,11 +102,11 @@ func (routes *Routes) UnmarshalJSON(data []byte) error {
 				return err
 			}
 
-			routes.Airports[destinationAirport.Code] = destinationAirport
-			originRoutes[destinationAirport.Code] = route
+			routes.Airports[destinationAirport.AirportCode] = destinationAirport
+			originRoutes[destinationAirport.AirportCode] = route
 		}
 
-		routes.Routes[originAirport.Code] = originRoutes
+		routes.Routes[originAirport.AirportCode] = originRoutes
 	}
 
 	return nil
@@ -127,8 +127,8 @@ func (airport *Airport) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	airport.Code = response.AirportCode
-	airport.Name = response.AirportName
+	airport.AirportCode = response.AirportCode
+	airport.AirportName = response.AirportName
 	airport.CountryCode = response.CountryCode
 	airport.Country = response.Country
 	airport.City = response.City

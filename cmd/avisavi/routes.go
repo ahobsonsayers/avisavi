@@ -82,8 +82,8 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 			fmt.Fprintf(
 				writer,
 				"%s (%s)\t->\t%s (%s)\tEconomy %d-%d\tBusiness %d-%d\n",
-				origin.City, origin.Code,
-				destination.City, destination.Code,
+				origin.City, origin.AirportCode,
+				destination.City, destination.AirportCode,
 				route.AviosPrices.Economy.MinAvios, route.AviosPrices.Economy.MaxAvios,
 				route.AviosPrices.Business.MinAvios, route.AviosPrices.Business.MaxAvios,
 			)

@@ -77,7 +77,7 @@ func TestClient_Routes(t *testing.T) {
 	routes, err := client.Routes(context.Background(), 1, false)
 	require.NoError(t, err)
 	require.Len(t, routes.Airports, 2)
-	assert.Equal(t, Airport{Code: "LON", Name: "London Heathrow", City: "London", Country: "United Kingdom"}, routes.Airports["LON"])
+	assert.Equal(t, Airport{AirportCode: "LON", AirportName: "London Heathrow", City: "London", Country: "United Kingdom"}, routes.Airports["LON"])
 	require.Contains(t, routes.Routes, "LON")
 	destination, found := routes.Routes["LON"]["ABV"]
 	require.True(t, found, "route LON->ABV should exist")
