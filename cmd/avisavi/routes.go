@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"text/tabwriter"
 
+	"github.com/ahobsonsayers/avisavi/pkg/gavios"
 	"github.com/urfave/cli/v3"
 )
 
@@ -43,9 +46,27 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	routes, err = routes.RoutesFromOrigin(cmd.String("origin"))
-	if err != nil {
-		return err
+	originFlag := cmd.String("origin")
+	if originFlag != "" {
+		originCode, err := gavios.NormalizeAirportCode(originFlag)
+		if err != nil {
+			return err
+		}
+
+		originRoutes, found := routes.Routes[originCode]
+		if !found {
+			return fmt.Errorf("origin %q not found in routes", originCode)
+		}
+
+		airports := map[string]gavios.Airport{originCode: routes.Airports[originCode]}
+		for destinationCode := range originRoutes {
+			airports[destinationCode] = routes.Airports[destinationCode]
+		}
+
+		routes = gavios.Routes{
+			Airports: airports,
+			Routes:   map[string]map[string]gavios.Route{originCode: originRoutes},
+		}
 	}
 
 	if cmd.Bool("json") {
@@ -53,16 +74,19 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	for _, originAirport := range routes.Origins {
-		for _, destination := range originAirport.Destinations {
-			economy := destination.AviosPerCabinClass["Economy"]
-			business := destination.AviosPerCabinClass["Business"]
+	for _, originCode := range slices.Sorted(maps.Keys(routes.Routes)) {
+		origin := routes.Airports[originCode]
+		for _, destinationCode := range slices.Sorted(maps.Keys(routes.Routes[originCode])) {
+			destination := routes.Airports[destinationCode]
+			route := routes.Routes[originCode][destinationCode]
 			fmt.Fprintf(
 				writer,
 				"%s (%s)\t->\t%s (%s)\tEconomy %d-%d\tBusiness %d-%d\n",
-				originAirport.Name, originAirport.AirportCode,
-				destination.DestinationName, destination.DestinationAirportCode,
-				economy.Min, economy.Max, business.Min, business.Max)
+				origin.City, origin.Code,
+				destination.City, destination.Code,
+				route.AviosPrices.Economy.MinAvios, route.AviosPrices.Economy.MaxAvios,
+				route.AviosPrices.Business.MinAvios, route.AviosPrices.Business.MaxAvios,
+			)
 		}
 	}
 

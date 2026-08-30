@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 	"text/tabwriter"
 
@@ -38,8 +40,9 @@ Examples:
 }
 
 type searchResult struct {
-	destination  gavios.Destination
-	routeFlights gavios.RouteFlights
+	destination  gavios.Airport
+	route        gavios.Route
+	availability gavios.RouteFlights
 }
 
 func searchAction(ctx context.Context, cmd *cli.Command) error {
@@ -59,7 +62,7 @@ func searchAction(ctx context.Context, cmd *cli.Command) error {
 	if cmd.Bool("json") {
 		allRouteFlights := make([]gavios.RouteFlights, 0, len(results))
 		for _, result := range results {
-			allRouteFlights = append(allRouteFlights, result.routeFlights)
+			allRouteFlights = append(allRouteFlights, result.availability)
 		}
 		return printJSON(allRouteFlights)
 	}
@@ -67,32 +70,30 @@ func searchAction(ctx context.Context, cmd *cli.Command) error {
 	return renderSearchResults(os.Stdout, results, outbound, returnDate, cabin, minSeats)
 }
 
-func searchDestinations(ctx context.Context, client *gavios.Client, origin string, adults int) []searchResult {
+func searchDestinations(ctx context.Context, client *gavios.Client, originCode string, adults int) []searchResult {
 	routes, err := client.Routes(ctx, adults, false)
 	if err != nil {
 		return nil
 	}
 
-	filtered, err := routes.RoutesFromOrigin(origin)
+	normalizedCode, err := gavios.NormalizeAirportCode(originCode)
 	if err != nil {
 		return nil
 	}
 
-	destinations := filtered.Origins[0].Destinations
+	destinationRoutes, found := routes.Routes[normalizedCode]
+	if !found {
+		return nil
+	}
 
-	destinations = lo.UniqBy(
-		destinations,
-		func(destination gavios.Destination) string {
-			return destination.DestinationAirportCode
-		},
-	)
+	results := make([]searchResult, 0, len(destinationRoutes))
+	for _, destinationCode := range slices.Sorted(maps.Keys(destinationRoutes)) {
+		route := destinationRoutes[destinationCode]
 
-	results := make([]searchResult, 0, len(destinations))
-	for _, destination := range destinations {
 		routeFlights, err := client.RouteFlights(
 			ctx,
-			origin,
-			destination.DestinationAirportCode,
+			normalizedCode,
+			destinationCode,
 			false,
 			adults,
 		)
@@ -103,8 +104,9 @@ func searchDestinations(ctx context.Context, client *gavios.Client, origin strin
 		results = append(
 			results,
 			searchResult{
-				destination:  destination,
-				routeFlights: routeFlights,
+				destination:  routes.Airports[destinationCode],
+				route:        route,
+				availability: routeFlights,
 			},
 		)
 	}
@@ -124,10 +126,10 @@ func renderSearchResults(w io.Writer, results []searchResult, outbound, returnDa
 			name    string
 			flights gavios.TripFlights
 		}{
-			{"Economy", result.routeFlights.Economy},
-			{"Premium", result.routeFlights.Premium},
-			{"Business", result.routeFlights.Business},
-			{"First", result.routeFlights.First},
+			{"Economy", result.availability.Economy},
+			{"Premium", result.availability.Premium},
+			{"Business", result.availability.Business},
+			{"First", result.availability.First},
 		}
 
 		for _, cabinTripFlights := range cabins {
@@ -142,9 +144,9 @@ func renderSearchResults(w io.Writer, results []searchResult, outbound, returnDa
 			if len(outboundFlights) > 0 && len(inboundFlights) > 0 {
 				fmt.Fprintf(
 					writer, "%s\t%s\t%s\t%s\t%s\t%d\t%s\t%d\n",
-					result.destination.DestinationAirportCode,
-					result.destination.DestinationName,
-					result.destination.CountryName,
+					result.destination.Code,
+					result.destination.City,
+					result.destination.Country,
 					cabinName,
 					outboundFlights[0].Time, outboundFlights[0].Seats,
 					inboundFlights[0].Time, inboundFlights[0].Seats,
