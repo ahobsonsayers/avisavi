@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/ahobsonsayers/avisavi/pkg/gavios"
@@ -158,7 +157,7 @@ func flightsOnDate(flights []gavios.Flight, date string) []gavios.Flight {
 	var matches []gavios.Flight
 
 	for _, flight := range flights {
-		if strings.HasPrefix(flight.Date, date) {
+		if flight.Departure.Format("2006-01-02") == date {
 			matches = append(matches, flight)
 		}
 	}

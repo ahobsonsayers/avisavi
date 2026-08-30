@@ -2,14 +2,19 @@ package gavios
 
 import (
 	"encoding/json"
+	"fmt"
 	"slices"
-	"strings"
+	"time"
+
+	"github.com/samber/lo"
 )
+
+const departureTimeLayout = "2006-01-02T15:04:05"
 
 // Flight is a single flight with reward seats available.
 type Flight struct {
-	// Date is the departure date and time (ISO timestamp).
-	Date string `json:"date"`
+	// Departure is the departure date and time.
+	Departure time.Time `json:"-"`
 	// Time is the departure time in HH:MM format.
 	Time string `json:"time"`
 	// Seats is the number of reward seats available.
@@ -18,12 +23,50 @@ type Flight struct {
 	Carrier string `json:"carrier"`
 }
 
+func (flight *Flight) UnmarshalJSON(data []byte) error {
+	type flightResponse struct {
+		Date    string `json:"date"`
+		Time    string `json:"time"`
+		Seats   int    `json:"seats"`
+		Carrier string `json:"carrier"`
+	}
+
+	var response flightResponse
+	err := json.Unmarshal(data, &response)
+	if err != nil {
+		return err
+	}
+
+	departure, err := time.Parse(departureTimeLayout, response.Date)
+	if err != nil {
+		return fmt.Errorf("parsing flight date %q: %w", response.Date, err)
+	}
+
+	flight.Departure = departure
+	flight.Time = response.Time
+	flight.Seats = response.Seats
+	flight.Carrier = response.Carrier
+
+	return nil
+}
+
 // TripFlights holds the flights for a trip, split by travel direction.
 type TripFlights struct {
 	// Outbound holds the outbound flights, ordered by departure date.
 	Outbound []Flight
 	// Inbound holds the inbound flights, ordered by departure date.
 	Inbound []Flight
+}
+
+func (t TripFlights) FilterByDates(outboundDate, returnDate DateRange) TripFlights {
+	if outboundDate.IsZero() && returnDate.IsZero() {
+		return t
+	}
+
+	return TripFlights{
+		Outbound: filterFlightsByDate(t.Outbound, outboundDate),
+		Inbound:  filterFlightsByDate(t.Inbound, returnDate),
+	}
 }
 
 func (t *TripFlights) UnmarshalJSON(data []byte) error {
@@ -83,8 +126,7 @@ func (r *RouteFlights) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// flightMapToSlice converts a date -> flights map to a slice ordered by
-// departure timestamp.
+// flightMapToSlice converts a date -> flights map to a slice ordered by departure time.
 func flightMapToSlice(flightMap map[string][]Flight) []Flight {
 	var flights []Flight
 
@@ -95,9 +137,35 @@ func flightMapToSlice(flightMap map[string][]Flight) []Flight {
 	slices.SortFunc(
 		flights,
 		func(left, right Flight) int {
-			return strings.Compare(left.Date, right.Date)
+			return left.Departure.Compare(right.Departure)
 		},
 	)
 
 	return flights
+}
+
+func (r RouteFlights) FilterByDates(outboundDate, returnDate DateRange) RouteFlights {
+	if outboundDate.IsZero() && returnDate.IsZero() {
+		return r
+	}
+
+	return RouteFlights{
+		Economy:  r.Economy.FilterByDates(outboundDate, returnDate),
+		Premium:  r.Premium.FilterByDates(outboundDate, returnDate),
+		Business: r.Business.FilterByDates(outboundDate, returnDate),
+		First:    r.First.FilterByDates(outboundDate, returnDate),
+	}
+}
+
+func filterFlightsByDate(flights []Flight, dateRange DateRange) []Flight {
+	if dateRange.IsZero() {
+		return flights
+	}
+
+	return lo.Filter(
+		flights,
+		func(flight Flight, _ int) bool {
+			return dateRange.InRange(flight.Departure)
+		},
+	)
 }

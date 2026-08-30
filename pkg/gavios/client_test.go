@@ -119,9 +119,9 @@ func TestClient_RouteFlights(t *testing.T) {
 	// Flights are ordered by full departure timestamp.
 	economy := routeFlights.Economy
 	require.Len(t, economy.Outbound, 3)
-	assert.Equal(t, "2026-06-23T08:30:00", economy.Outbound[0].Date)
-	assert.Equal(t, "2026-06-23T21:00:00", economy.Outbound[1].Date)
-	assert.Equal(t, "2026-06-24T07:15:00", economy.Outbound[2].Date)
+	assert.Equal(t, "2026-06-23T08:30:00", economy.Outbound[0].Departure.Format(departureTimeLayout))
+	assert.Equal(t, "2026-06-23T21:00:00", economy.Outbound[1].Departure.Format(departureTimeLayout))
+	assert.Equal(t, "2026-06-24T07:15:00", economy.Outbound[2].Departure.Format(departureTimeLayout))
 
 	assert.Empty(t, routeFlights.Business.Outbound)
 

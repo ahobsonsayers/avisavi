@@ -91,7 +91,7 @@ func renderFlights(w io.Writer, name string, flights []gavios.Flight) {
 	for _, flight := range flights {
 		fmt.Fprintf(
 			w, "    %s %s seats=%d %s [%s]\n",
-			flight.Date[:10],
+			flight.Departure.Format("2006-01-02"),
 			flight.Time,
 			flight.Seats,
 			flight.Carrier,
