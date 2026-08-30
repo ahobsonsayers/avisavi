@@ -8,7 +8,7 @@ A CLI for searching Avios reward flights from the terminal.
 
 Search reward flight availability, browse routes across cabin classes, and check your balance.
 
-It uses the same API as the official app, built via reverse engineering its logic.
+It uses the same API as the official Android app, built via decompiling and reverse engineering its code. Decompilation scripts and learnings can be found in the [`avios-decompile`](https://github.com/ahobsonsayers/avios-decompile) repo.
 
 ## Features
 
