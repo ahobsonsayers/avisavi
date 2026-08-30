@@ -26,7 +26,7 @@ type TripFlights struct {
 	Inbound []Flight
 }
 
-func (tripFlights *TripFlights) UnmarshalJSON(data []byte) error {
+func (t *TripFlights) UnmarshalJSON(data []byte) error {
 	type flightsResponse struct {
 		Flights map[string][]Flight `json:"flightsPerDate"`
 	}
@@ -42,8 +42,8 @@ func (tripFlights *TripFlights) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	tripFlights.Outbound = flightMapToSlice(response.Outbound.Flights)
-	tripFlights.Inbound = flightMapToSlice(response.Inbound.Flights)
+	t.Outbound = flightMapToSlice(response.Outbound.Flights)
+	t.Inbound = flightMapToSlice(response.Inbound.Flights)
 
 	return nil
 }
@@ -56,7 +56,7 @@ type RouteFlights struct {
 	First    TripFlights
 }
 
-func (routeFlights *RouteFlights) UnmarshalJSON(data []byte) error {
+func (r *RouteFlights) UnmarshalJSON(data []byte) error {
 	type availabilityPerCabinResponse struct {
 		Economy  TripFlights `json:"Economy"`
 		Premium  TripFlights `json:"Premium"`
@@ -75,10 +75,10 @@ func (routeFlights *RouteFlights) UnmarshalJSON(data []byte) error {
 	}
 
 	cabins := response.AvailabilityPerCabin
-	routeFlights.Economy = cabins.Economy
-	routeFlights.Premium = cabins.Premium
-	routeFlights.Business = cabins.Business
-	routeFlights.First = cabins.First
+	r.Economy = cabins.Economy
+	r.Premium = cabins.Premium
+	r.Business = cabins.Business
+	r.First = cabins.First
 
 	return nil
 }

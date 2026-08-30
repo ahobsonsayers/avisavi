@@ -63,8 +63,8 @@ func (c *Client) Balance(ctx context.Context) (Balance, error) {
 	return balance, nil
 }
 
-// Routes fetches reward destinations grouped by origin airport.
-func (client *Client) Routes(ctx context.Context, adults int, oneWay bool) (Routes, error) {
+// RouteNetwork fetches reward destinations grouped by origin airport.
+func (c *Client) RouteNetwork(ctx context.Context, adults int, oneWay bool) (RouteNetwork, error) {
 	query := url.Values{}
 	query.Set("ByAirport", "true")
 	query.Set("Adults", strconv.Itoa(adults))
@@ -73,20 +73,20 @@ func (client *Client) Routes(ctx context.Context, adults int, oneWay bool) (Rout
 	query.Set("Infants", "0")
 	query.Set("OneWay", strconv.FormatBool(oneWay))
 
-	var routes Routes
-	err := client.get(
+	var routes RouteNetwork
+	err := c.get(
 		ctx,
 		"/spend/v1/flight/routes",
 		query,
 		&routes,
 	)
 	if err != nil {
-		return Routes{}, err
+		return RouteNetwork{}, err
 	}
 	return routes, nil
 }
 
-func (client *Client) RouteFlights(
+func (c *Client) RouteFlights(
 	ctx context.Context,
 	origin, destination string,
 	oneWay bool,
@@ -113,7 +113,7 @@ func (client *Client) RouteFlights(
 	query.Set("IncludeNonBookableFlights", "true")
 
 	var routeFlights RouteFlights
-	err = client.get(
+	err = c.get(
 		ctx,
 		"/spend/v1/flight/allcabins",
 		query,

@@ -74,7 +74,7 @@ func TestClient_Routes(t *testing.T) {
 			return httpmock.NewStringResponse(200, routesResp), nil
 		})
 
-	routes, err := client.Routes(context.Background(), 1, false)
+	routes, err := client.RouteNetwork(context.Background(), 1, false)
 	require.NoError(t, err)
 	require.Len(t, routes.Airports, 2)
 	assert.Equal(t, Airport{AirportCode: "LON", AirportName: "London Heathrow", City: "London", Country: "United Kingdom"}, routes.Airports["LON"])

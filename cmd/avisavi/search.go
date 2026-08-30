@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"maps"
 	"os"
-	"slices"
 	"strings"
 	"text/tabwriter"
 
@@ -41,7 +39,6 @@ Examples:
 
 type searchResult struct {
 	destination  gavios.Airport
-	route        gavios.Route
 	availability gavios.RouteFlights
 }
 
@@ -71,29 +68,22 @@ func searchAction(ctx context.Context, cmd *cli.Command) error {
 }
 
 func searchDestinations(ctx context.Context, client *gavios.Client, originCode string, adults int) []searchResult {
-	routes, err := client.Routes(ctx, adults, false)
+	routes, err := client.RouteNetwork(ctx, adults, false)
 	if err != nil {
 		return nil
 	}
 
-	normalizedCode, err := gavios.NormalizeAirportCode(originCode)
+	routeList, err := routes.GetRoutes(originCode)
 	if err != nil {
 		return nil
 	}
 
-	destinationRoutes, found := routes.Routes[normalizedCode]
-	if !found {
-		return nil
-	}
-
-	results := make([]searchResult, 0, len(destinationRoutes))
-	for _, destinationCode := range slices.Sorted(maps.Keys(destinationRoutes)) {
-		route := destinationRoutes[destinationCode]
-
+	results := make([]searchResult, 0, len(routeList))
+	for _, route := range routeList {
 		routeFlights, err := client.RouteFlights(
 			ctx,
-			normalizedCode,
-			destinationCode,
+			route.Origin.AirportCode,
+			route.Destination.AirportCode,
 			false,
 			adults,
 		)
@@ -104,8 +94,7 @@ func searchDestinations(ctx context.Context, client *gavios.Client, originCode s
 		results = append(
 			results,
 			searchResult{
-				destination:  routes.Airports[destinationCode],
-				route:        route,
+				destination:  route.Destination,
 				availability: routeFlights,
 			},
 		)

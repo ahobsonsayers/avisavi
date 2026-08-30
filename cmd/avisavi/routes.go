@@ -3,12 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"maps"
 	"os"
-	"slices"
 	"text/tabwriter"
 
-	"github.com/ahobsonsayers/avisavi/pkg/gavios"
 	"github.com/urfave/cli/v3"
 )
 
@@ -37,7 +34,7 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	routes, err := client.Routes(
+	routes, err := client.RouteNetwork(
 		ctx,
 		cmd.Int("adults"),
 		cmd.Bool("one-way"),
@@ -46,48 +43,25 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	originFlag := cmd.String("origin")
-	if originFlag != "" {
-		originCode, err := gavios.NormalizeAirportCode(originFlag)
-		if err != nil {
-			return err
-		}
-
-		originRoutes, found := routes.Routes[originCode]
-		if !found {
-			return fmt.Errorf("origin %q not found in routes", originCode)
-		}
-
-		airports := map[string]gavios.Airport{originCode: routes.Airports[originCode]}
-		for destinationCode := range originRoutes {
-			airports[destinationCode] = routes.Airports[destinationCode]
-		}
-
-		routes = gavios.Routes{
-			Airports: airports,
-			Routes:   map[string]map[string]gavios.Route{originCode: originRoutes},
-		}
+	routeList, err := routes.GetRoutes(cmd.String("origin"))
+	if err != nil {
+		return err
 	}
 
 	if cmd.Bool("json") {
-		return printJSON(routes)
+		return printJSON(routeList)
 	}
 
 	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	for _, originCode := range slices.Sorted(maps.Keys(routes.Routes)) {
-		origin := routes.Airports[originCode]
-		for _, destinationCode := range slices.Sorted(maps.Keys(routes.Routes[originCode])) {
-			destination := routes.Airports[destinationCode]
-			route := routes.Routes[originCode][destinationCode]
-			fmt.Fprintf(
-				writer,
-				"%s (%s)\t->\t%s (%s)\tEconomy %d-%d\tBusiness %d-%d\n",
-				origin.City, origin.AirportCode,
-				destination.City, destination.AirportCode,
-				route.AviosPrices.Economy.MinAvios, route.AviosPrices.Economy.MaxAvios,
-				route.AviosPrices.Business.MinAvios, route.AviosPrices.Business.MaxAvios,
-			)
-		}
+	for _, route := range routeList {
+		fmt.Fprintf(
+			writer,
+			"%s (%s)\t->\t%s (%s)\tEconomy %d-%d\tBusiness %d-%d\n",
+			route.Origin.City, route.Origin.AirportCode,
+			route.Destination.City, route.Destination.AirportCode,
+			route.Details.AviosPrices.Economy.MinAvios, route.Details.AviosPrices.Economy.MaxAvios,
+			route.Details.AviosPrices.Business.MinAvios, route.Details.AviosPrices.Business.MaxAvios,
+		)
 	}
 
 	return writer.Flush()
