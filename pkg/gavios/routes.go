@@ -2,76 +2,168 @@ package gavios
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
+	"maps"
 	"net/url"
 	"slices"
 	"strconv"
-
-	"github.com/samber/lo"
 )
 
-// Routes lists reward destinations available from one or more origins.
 type Routes struct {
-	// Origins is the set of origin airports and their bookable destinations.
-	Origins []Origin `json:"origins"`
-	// BroadSearchGroups groups destinations by continent/area with price ranges.
-	BroadSearchGroups []Category `json:"broadSearchGroups"`
+	// Airport code -> Airport details
+	Airports map[string]Airport
+
+	// Origin airport code -> Destination airport code -> Route details
+	Routes map[string]map[string]Route
 }
 
-// Origin is a departure airport and every destination bookable from it.
-type Origin struct {
-	// AirportCode is the IATA code of the departure airport.
-	AirportCode string `json:"airportCode"`
-	// AirportName is the full name of the departure airport.
-	AirportName string `json:"airportName"`
-	// Name is the name of the city the airport serves.
-	Name string `json:"name"`
-	// CountryName is the full country name of the departure airport.
-	CountryName string `json:"countryName"`
-	// Destinations are the reward destinations reachable from this origin.
-	Destinations []Destination `json:"destinations"`
+type Airport struct {
+	Code        string `json:"airportCode"`
+	Name        string `json:"airportName"`
+	CountryCode string `json:"countryCode,omitempty"`
+	Country     string `json:"countryName"`
+	City        string `json:"name"`
 }
 
-// Destination is a reward destination reachable from an origin.
-type Destination struct {
-	// DestinationAirportCode is the IATA code of the destination airport.
-	DestinationAirportCode string `json:"airportCode"`
-	// DestinationAirportName is the full name of the destination airport.
-	DestinationAirportName string `json:"airportName"`
-	// DestinationName is the name of the city the airport serves.
-	DestinationName string `json:"name"`
-	// CountryCode is the ISO country code of the destination.
-	CountryCode string `json:"countryCode"`
-	// CountryName is the full country name of the destination.
-	CountryName string `json:"countryName"`
-	// BroadSearchCategories lists the theme categories this destination belongs to.
-	BroadSearchCategories []string `json:"broadSearchCategories"`
-	// AviosPerCabinClass maps a cabin class (e.g. "Economy") to its price range.
-	AviosPerCabinClass map[string]CabinPrice `json:"aviosPerCabinClass"`
-	// FlownByPartners lists partner airlines that operate reward flights here.
-	FlownByPartners []string `json:"flownByPartners"`
+type Route struct {
+	Region      string
+	FlownBy     []string    `json:"flownByPartners"`
+	AviosPrices AviosPrices `json:"aviosPerCabinClass"`
 }
 
-// CabinPrice is the Avios price range for a single cabin class.
-type CabinPrice struct {
-	// Min is the lowest Avios price for this cabin class.
-	Min int `json:"min"`
-	// Max is the highest Avios price for this cabin class.
-	Max int `json:"max"`
+type AviosPrices struct {
+	Economy  AviosPrice `json:"Economy"`
+	Premium  AviosPrice `json:"Premium"`
+	Business AviosPrice `json:"Business"`
+	First    AviosPrice `json:"First"`
 }
 
-// Category groups destinations under a single high-level theme.
-type Category struct {
-	// Name is the theme name (e.g. "Beach", "City break").
-	Name string `json:"name"`
-	// DestinationCount is the number of destinations in this category.
-	DestinationCount int `json:"destinationCount"`
-	// AviosPerCabinClass maps a cabin class to its price range.
-	AviosPerCabinClass map[string]CabinPrice `json:"aviosPerCabinClass"`
+type AviosPrice struct {
+	MinAvios int `json:"min"`
+	MaxAvios int `json:"max"`
 }
 
-// Routes returns reward destinations grouped by origin airport.
-func (c *Client) Routes(ctx context.Context, adults int, oneWay bool) (Routes, error) {
+// Regions returns geographic regions across all routes, sorted alphabetically.
+func (routes Routes) Regions() []string {
+	regions := make(map[string]struct{})
+	for _, originRoutes := range routes.Routes {
+		for _, route := range originRoutes {
+			if route.Region != "" {
+				regions[route.Region] = struct{}{}
+			}
+		}
+	}
+
+	return slices.Sorted(maps.Keys(regions))
+}
+
+func (routes *Routes) UnmarshalJSON(data []byte) error {
+	type originResponse struct {
+		Destinations []json.RawMessage `json:"destinations"`
+	}
+
+	type routesResponse struct {
+		Origins []json.RawMessage `json:"origins"`
+	}
+
+	var response routesResponse
+	err := json.Unmarshal(data, &response)
+	if err != nil {
+		return err
+	}
+
+	routes.Airports = make(map[string]Airport)
+	routes.Routes = make(map[string]map[string]Route)
+
+	for _, originRaw := range response.Origins {
+
+		var origin originResponse
+		err = json.Unmarshal(originRaw, &origin)
+		if err != nil {
+			return err
+		}
+
+		var originAirport Airport
+		err = json.Unmarshal(originRaw, &originAirport)
+		if err != nil {
+			return err
+		}
+
+		routes.Airports[originAirport.Code] = originAirport
+
+		originRoutes := make(map[string]Route)
+		for _, destinationRaw := range origin.Destinations {
+			var destinationAirport Airport
+			err = json.Unmarshal(destinationRaw, &destinationAirport)
+			if err != nil {
+				return err
+			}
+
+			var route Route
+			err = json.Unmarshal(destinationRaw, &route)
+			if err != nil {
+				return err
+			}
+
+			routes.Airports[destinationAirport.Code] = destinationAirport
+			originRoutes[destinationAirport.Code] = route
+		}
+
+		routes.Routes[originAirport.Code] = originRoutes
+	}
+
+	return nil
+}
+
+func (airport *Airport) UnmarshalJSON(data []byte) error {
+	type airportResponse struct {
+		AirportCode string `json:"airportCode"`
+		AirportName string `json:"airportName"`
+		CountryCode string `json:"countryCode"`
+		Country     string `json:"countryName"`
+		City        string `json:"name"`
+	}
+
+	var response airportResponse
+	err := json.Unmarshal(data, &response)
+	if err != nil {
+		return err
+	}
+
+	airport.Code = response.AirportCode
+	airport.Name = response.AirportName
+	airport.CountryCode = response.CountryCode
+	airport.Country = response.Country
+	airport.City = response.City
+
+	return nil
+}
+
+func (route *Route) UnmarshalJSON(data []byte) error {
+	type routeResponse struct {
+		BroadSearchCategories []string    `json:"broadSearchCategories"`
+		Prices                AviosPrices `json:"aviosPerCabinClass"`
+		FlownByPartners       []string    `json:"flownByPartners"`
+	}
+
+	var response routeResponse
+	err := json.Unmarshal(data, &response)
+	if err != nil {
+		return err
+	}
+
+	route.Region = ""
+	if len(response.BroadSearchCategories) > 0 {
+		route.Region = response.BroadSearchCategories[0]
+	}
+	route.AviosPrices = response.Prices
+	route.FlownBy = response.FlownByPartners
+
+	return nil
+}
+
+// Routes fetches reward destinations grouped by origin airport.
+func (client *Client) Routes(ctx context.Context, adults int, oneWay bool) (Routes, error) {
 	query := url.Values{}
 	query.Set("ByAirport", "true")
 	query.Set("Adults", strconv.Itoa(adults))
@@ -81,7 +173,7 @@ func (c *Client) Routes(ctx context.Context, adults int, oneWay bool) (Routes, e
 	query.Set("OneWay", strconv.FormatBool(oneWay))
 
 	var routes Routes
-	err := c.get(
+	err := client.get(
 		ctx,
 		"/spend/v1/flight/routes",
 		query,
@@ -91,43 +183,4 @@ func (c *Client) Routes(ctx context.Context, adults int, oneWay bool) (Routes, e
 		return Routes{}, err
 	}
 	return routes, nil
-}
-
-// RoutesFromOrigin filters routes to a single origin airport.
-// An empty origin returns all routes.
-func (routes Routes) RoutesFromOrigin(originAirport string) (Routes, error) {
-	if originAirport == "" {
-		return routes, nil
-	}
-
-	origin, err := normalizeAirportCode(originAirport)
-	if err != nil {
-		return Routes{}, err
-	}
-
-	for _, o := range routes.Origins {
-		if o.AirportCode == origin {
-			return Routes{
-				Origins:           []Origin{o},
-				BroadSearchGroups: routes.BroadSearchGroups,
-			}, nil
-		}
-	}
-
-	return Routes{}, fmt.Errorf("origin %q not found in routes", origin)
-}
-
-// Regions broad regions categories across all destinations, sorted alphabetically.
-func (routes Routes) Regions() []string {
-	var regions []string
-	for _, origin := range routes.Origins {
-		for _, destination := range origin.Destinations {
-			regions = append(regions, destination.BroadSearchCategories...)
-		}
-	}
-
-	regions = lo.Uniq(regions)
-	slices.Sort(regions)
-
-	return regions
 }

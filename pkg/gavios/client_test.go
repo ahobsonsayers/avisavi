@@ -57,8 +57,9 @@ func TestClient_AuthHeader(t *testing.T) {
 	}
 }
 
-const routesResp = `{"origins":[{"airportCode":"LON","destinations":[` +
-	`{"airportCode":"ABV","name":"Abuja","countryName":"Nigeria",` +
+const routesResp = `{"origins":[{"airportCode":"LON","airportName":"London Heathrow","name":"London","countryName":"United Kingdom",` +
+	`"destinations":[` +
+	`{"airportCode":"ABV","airportName":"Nnamdi Azikiwe International","name":"Abuja","countryCode":"NG","countryName":"Nigeria",` +
 	`"aviosPerCabinClass":{"Economy":{"min":100,"max":200}}}]}],"broadSearchGroups":[]}`
 
 func TestClient_Routes(t *testing.T) {
@@ -75,12 +76,13 @@ func TestClient_Routes(t *testing.T) {
 
 	routes, err := client.Routes(context.Background(), 1, false)
 	require.NoError(t, err)
-	require.Len(t, routes.Origins, 1)
-	assert.Equal(t, "LON", routes.Origins[0].AirportCode)
-	require.Len(t, routes.Origins[0].Destinations, 1)
-	destination := routes.Origins[0].Destinations[0]
-	assert.Equal(t, "ABV", destination.DestinationAirportCode)
-	assert.Equal(t, 100, destination.AviosPerCabinClass["Economy"].Min)
+	require.Len(t, routes.Airports, 2)
+	assert.Equal(t, Airport{Code: "LON", Name: "London Heathrow", City: "London", Country: "United Kingdom"}, routes.Airports["LON"])
+	require.Contains(t, routes.Routes, "LON")
+	destination, found := routes.Routes["LON"]["ABV"]
+	require.True(t, found, "route LON->ABV should exist")
+	assert.Equal(t, "Abuja", routes.Airports["ABV"].City)
+	assert.Equal(t, 100, destination.AviosPrices.Economy.MinAvios)
 
 	require.NotNil(t, captured)
 	query := captured.URL.Query()
@@ -88,17 +90,9 @@ func TestClient_Routes(t *testing.T) {
 	assert.Equal(t, "1", query.Get("Adults"))
 	assert.Equal(t, "false", query.Get("OneWay"))
 
-	filtered, err := routes.RoutesFromOrigin("lon")
+	upper, err := NormalizeAirportCode("lon")
 	require.NoError(t, err)
-	require.Len(t, filtered.Origins, 1)
-	assert.Equal(t, "LON", filtered.Origins[0].AirportCode)
-
-	all, err := routes.RoutesFromOrigin("")
-	require.NoError(t, err)
-	assert.Len(t, all.Origins, len(routes.Origins))
-
-	_, err = routes.RoutesFromOrigin("JFK")
-	assert.Error(t, err)
+	assert.Equal(t, "LON", upper)
 }
 
 const routeFlightsJSON = `{"availabilityPerCabin":{"Economy":{"outbound":{"flightsPerDate":` +
@@ -141,12 +135,12 @@ func TestClient_RouteFlights(t *testing.T) {
 }
 
 func TestNormalizeAirportCode(t *testing.T) {
-	upper, err := normalizeAirportCode("lon")
+	upper, err := NormalizeAirportCode("lon")
 	require.NoError(t, err)
 	assert.Equal(t, "LON", upper)
 
 	for _, bad := range []string{"", "LO", "LONN", "L0N", "12A"} {
-		_, err := normalizeAirportCode(bad)
+		_, err := NormalizeAirportCode(bad)
 		assert.Error(t, err, "code %q should be rejected", bad)
 	}
 }

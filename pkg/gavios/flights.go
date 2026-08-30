@@ -92,12 +92,12 @@ func (client *Client) RouteFlights(
 	oneWay bool,
 	adults int,
 ) (RouteFlights, error) {
-	origin, err := normalizeAirportCode(origin)
+	origin, err := NormalizeAirportCode(origin)
 	if err != nil {
 		return RouteFlights{}, err
 	}
 
-	destination, err = normalizeAirportCode(destination)
+	destination, err = NormalizeAirportCode(destination)
 	if err != nil {
 		return RouteFlights{}, err
 	}
