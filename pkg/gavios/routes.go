@@ -1,12 +1,9 @@
 package gavios
 
 import (
-	"context"
 	"encoding/json"
 	"maps"
-	"net/url"
 	"slices"
-	"strconv"
 )
 
 type Routes struct {
@@ -160,27 +157,4 @@ func (route *Route) UnmarshalJSON(data []byte) error {
 	route.FlownBy = response.FlownByPartners
 
 	return nil
-}
-
-// Routes fetches reward destinations grouped by origin airport.
-func (client *Client) Routes(ctx context.Context, adults int, oneWay bool) (Routes, error) {
-	query := url.Values{}
-	query.Set("ByAirport", "true")
-	query.Set("Adults", strconv.Itoa(adults))
-	query.Set("YoungAdults", "0")
-	query.Set("Children", "0")
-	query.Set("Infants", "0")
-	query.Set("OneWay", strconv.FormatBool(oneWay))
-
-	var routes Routes
-	err := client.get(
-		ctx,
-		"/spend/v1/flight/routes",
-		query,
-		&routes,
-	)
-	if err != nil {
-		return Routes{}, err
-	}
-	return routes, nil
 }

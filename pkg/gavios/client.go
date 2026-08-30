@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/ahobsonsayers/avisavi/pkg/gavios/auth"
@@ -45,6 +46,84 @@ func NewClient(authData *auth.AuthData) *Client {
 
 func (c *Client) MembershipNumber() (string, error) {
 	return c.authData.MembershipNumber()
+}
+
+func (c *Client) Balance(ctx context.Context) (Balance, error) {
+	var balance Balance
+	err := c.get(
+		ctx,
+		"/member/v1/balance",
+		nil,
+		&balance,
+	)
+	if err != nil {
+		return Balance{}, err
+	}
+
+	return balance, nil
+}
+
+// Routes fetches reward destinations grouped by origin airport.
+func (client *Client) Routes(ctx context.Context, adults int, oneWay bool) (Routes, error) {
+	query := url.Values{}
+	query.Set("ByAirport", "true")
+	query.Set("Adults", strconv.Itoa(adults))
+	query.Set("YoungAdults", "0")
+	query.Set("Children", "0")
+	query.Set("Infants", "0")
+	query.Set("OneWay", strconv.FormatBool(oneWay))
+
+	var routes Routes
+	err := client.get(
+		ctx,
+		"/spend/v1/flight/routes",
+		query,
+		&routes,
+	)
+	if err != nil {
+		return Routes{}, err
+	}
+	return routes, nil
+}
+
+func (client *Client) RouteFlights(
+	ctx context.Context,
+	origin, destination string,
+	oneWay bool,
+	adults int,
+) (RouteFlights, error) {
+	origin, err := NormalizeAirportCode(origin)
+	if err != nil {
+		return RouteFlights{}, err
+	}
+
+	destination, err = NormalizeAirportCode(destination)
+	if err != nil {
+		return RouteFlights{}, err
+	}
+
+	query := url.Values{}
+	query.Set("Origin", origin)
+	query.Set("Destination", destination)
+	query.Set("OneWay", strconv.FormatBool(oneWay))
+	query.Set("Adults", strconv.Itoa(adults))
+	query.Set("YoungAdults", "0")
+	query.Set("Children", "0")
+	query.Set("Infants", "0")
+	query.Set("IncludeNonBookableFlights", "true")
+
+	var routeFlights RouteFlights
+	err = client.get(
+		ctx,
+		"/spend/v1/flight/allcabins",
+		query,
+		&routeFlights,
+	)
+	if err != nil {
+		return RouteFlights{}, err
+	}
+
+	return routeFlights, nil
 }
 
 func (c *Client) get(ctx context.Context, path string, query url.Values, outValue any) error {

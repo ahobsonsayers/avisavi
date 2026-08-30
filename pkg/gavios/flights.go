@@ -1,11 +1,8 @@
 package gavios
 
 import (
-	"context"
 	"encoding/json"
-	"net/url"
 	"slices"
-	"strconv"
 	"strings"
 )
 
@@ -84,46 +81,6 @@ func (routeFlights *RouteFlights) UnmarshalJSON(data []byte) error {
 	routeFlights.First = cabins.First
 
 	return nil
-}
-
-func (client *Client) RouteFlights(
-	ctx context.Context,
-	origin, destination string,
-	oneWay bool,
-	adults int,
-) (RouteFlights, error) {
-	origin, err := NormalizeAirportCode(origin)
-	if err != nil {
-		return RouteFlights{}, err
-	}
-
-	destination, err = NormalizeAirportCode(destination)
-	if err != nil {
-		return RouteFlights{}, err
-	}
-
-	query := url.Values{}
-	query.Set("Origin", origin)
-	query.Set("Destination", destination)
-	query.Set("OneWay", strconv.FormatBool(oneWay))
-	query.Set("Adults", strconv.Itoa(adults))
-	query.Set("YoungAdults", "0")
-	query.Set("Children", "0")
-	query.Set("Infants", "0")
-	query.Set("IncludeNonBookableFlights", "true")
-
-	var routeFlights RouteFlights
-	err = client.get(
-		ctx,
-		"/spend/v1/flight/allcabins",
-		query,
-		&routeFlights,
-	)
-	if err != nil {
-		return RouteFlights{}, err
-	}
-
-	return routeFlights, nil
 }
 
 // flightMapToSlice converts a date -> flights map to a slice ordered by
