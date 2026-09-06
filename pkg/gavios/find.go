@@ -86,7 +86,7 @@ func (c *Client) findRoutes(ctx context.Context, input FindFlightsInput) ([]Rout
 		return nil, err
 	}
 
-	network, err := c.RouteNetwork(ctx, input.Adults, input.OneWay)
+	network, err := c.RouteNetwork(ctx)
 	if err != nil {
 		return nil, err
 	}

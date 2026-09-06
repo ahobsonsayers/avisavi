@@ -17,12 +17,9 @@ the minimum and maximum Avios needed per cabin class.
 
 Examples:
   avisavi routes
-  avisavi routes --origin LON
-  avisavi routes --origin JFK --adults 2 --one-way`,
+  avisavi routes --origin LON`,
 	Flags: []cli.Flag{
 		&cli.StringFlag{Name: "origin", Aliases: []string{"o"}, Usage: "IATA origin code (omit for all origins)"},
-		&cli.IntFlag{Name: "adults", Aliases: []string{"a"}, Value: 1, Usage: "number of adults"},
-		&cli.BoolFlag{Name: "one-way", Usage: "one-way flights only"},
 		&cli.BoolFlag{Name: "json", Usage: "print raw JSON"},
 	},
 	Action: routesAction,
@@ -34,11 +31,7 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	routes, err := client.RouteNetwork(
-		ctx,
-		cmd.Int("adults"),
-		cmd.Bool("one-way"),
-	)
+	routes, err := client.RouteNetwork(ctx)
 	if err != nil {
 		return err
 	}
