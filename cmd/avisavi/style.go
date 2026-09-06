@@ -10,8 +10,10 @@ import (
 
 var (
 	successStyle = lipgloss.NewStyle().Foreground(adaptiveColour("40"))
+	errorStyle   = lipgloss.NewStyle().Foreground(adaptiveColour("196"))
 	arrowStyle   = lipgloss.NewStyle().Foreground(adaptiveColour("248"))
 	numberStyle  = lipgloss.NewStyle().Bold(true)
+	unitStyle    = lipgloss.NewStyle().Bold(true).Foreground(adaptiveColour("248"))
 	noteStyle    = lipgloss.NewStyle().Foreground(adaptiveColour("248"))
 	headerStyle  = lipgloss.NewStyle().Bold(true).Foreground(adaptiveColour("248"))
 
@@ -23,9 +25,8 @@ var (
 // Find command styles.
 
 var (
-	routeHeaderStyle = lipgloss.NewStyle().Bold(true)
-	directionStyle   = lipgloss.NewStyle().Foreground(adaptiveColour("248"))
-	carrierStyle     = lipgloss.NewStyle().Faint(true)
+	directionStyle = lipgloss.NewStyle().Foreground(adaptiveColour("248"))
+	carrierStyle   = lipgloss.NewStyle().Faint(true)
 
 	cabinStyles = map[string]lipgloss.Style{
 		"Economy":  cabinStyle("136"),

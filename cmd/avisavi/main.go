@@ -36,7 +36,7 @@ Examples:
 func main() {
 	err := rootCmd.Run(context.Background(), os.Args)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(errorStyle.Render(err.Error()))
 	}
 }
 

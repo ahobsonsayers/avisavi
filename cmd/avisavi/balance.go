@@ -38,13 +38,14 @@ func balanceAction(ctx context.Context, cmd *cli.Command) error {
 
 	if balance.IsHousehold {
 		fmt.Printf(
-			"%s Avios %s\n",
+			"%s %s %s\n",
 			numberStyle.Render(strconv.Itoa(balance.AvailableAvios)),
+			unitStyle.Render("Avios"),
 			noteStyle.Render("(household)"),
 		)
 		return nil
 	}
 
-	fmt.Printf("%s Avios\n", numberStyle.Render(strconv.Itoa(balance.AvailableAvios)))
+	fmt.Printf("%s %s\n", numberStyle.Render(strconv.Itoa(balance.AvailableAvios)), unitStyle.Render("Avios"))
 	return nil
 }

@@ -173,11 +173,12 @@ func cabinTripFlights(routeFlights gavios.RouteFlights, cabin string) []cabinFli
 // cabin, with colour-coded seat counts.
 func renderFlights(w io.Writer, found []gavios.FoundFlights, cabin string) error {
 	for _, flights := range found {
-		routeHeader := routeHeaderStyle.Render(fmt.Sprintf(
-			"%s → %s",
-			flights.Origin.AirportCode,
-			flights.Destination.AirportCode,
-		))
+		routeHeader := fmt.Sprintf(
+			"%s %s %s",
+			originCodeStyle.Render(flights.Origin.AirportCode),
+			arrowStyle.Render("→"),
+			destinationCodeStyle.Render(flights.Destination.AirportCode),
+		)
 		fmt.Fprintf(w, "\n%s\n", routeHeader)
 
 		cabins := cabinTripFlights(flights.RouteFlights, cabin)
