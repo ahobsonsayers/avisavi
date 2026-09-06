@@ -67,7 +67,8 @@ func (c *Client) Balance(ctx context.Context) (Balance, error) {
 	return balance, nil
 }
 
-func (c *Client) RouteNetwork(ctx context.Context) (RouteNetwork, error) {
+// RouteFlights gets the route network - airports and flown routes
+func (c *Client) Network(ctx context.Context) (Network, error) {
 	query := url.Values{}
 	query.Set("ByAirport", "true")
 	query.Set("Adults", "1")
@@ -82,30 +83,31 @@ func (c *Client) RouteNetwork(ctx context.Context) (RouteNetwork, error) {
 		query,
 	)
 	if err != nil {
-		return RouteNetwork{}, err
+		return Network{}, err
 	}
 
 	var response routesResponse
 	err = json.Unmarshal(data, &response)
 	if err != nil {
-		return RouteNetwork{}, fmt.Errorf("decoding routes response: %w", err)
+		return Network{}, fmt.Errorf("decoding routes response: %w", err)
 	}
 
-	return response.toRouteNetwork(), nil
+	return response.toNetwork()
 }
 
+// RouteFlights gets flights for a particular route
 func (c *Client) RouteFlights(
 	ctx context.Context,
 	origin, destination string,
 	oneWay bool,
 	adults int,
 ) (RouteFlights, error) {
-	origin, err := NormalizeAirportCode(origin)
+	origin, err := NormalizeAirportCode(origin, nil)
 	if err != nil {
 		return RouteFlights{}, err
 	}
 
-	destination, err = NormalizeAirportCode(destination)
+	destination, err = NormalizeAirportCode(destination, nil)
 	if err != nil {
 		return RouteFlights{}, err
 	}

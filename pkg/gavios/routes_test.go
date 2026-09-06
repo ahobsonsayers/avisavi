@@ -24,7 +24,7 @@ const routesJSON = `{"origins":[` +
 	`"aviosPerCabinClass":{"Economy":{"min":7500,"max":12500}}}` +
 	`]}]}`
 
-func unmarshalTestRouteNetwork(t *testing.T) RouteNetwork {
+func unmarshalTestNetwork(t *testing.T) Network {
 	t.Helper()
 
 	var response routesResponse
@@ -33,11 +33,16 @@ func unmarshalTestRouteNetwork(t *testing.T) RouteNetwork {
 		t.Fatalf("unmarshal routes: %v", err)
 	}
 
-	return response.toRouteNetwork()
+	network, err := response.toNetwork()
+	if err != nil {
+		t.Fatalf("convert routes: %v", err)
+	}
+
+	return network
 }
 
 func TestRoutes_UnmarshalJSON_Airports(t *testing.T) {
-	routes := unmarshalTestRouteNetwork(t)
+	routes := unmarshalTestNetwork(t)
 
 	if len(routes.Airports) != 5 {
 		t.Fatalf("expected 5 airports, got %d", len(routes.Airports))
@@ -55,9 +60,9 @@ func TestRoutes_UnmarshalJSON_Airports(t *testing.T) {
 }
 
 func TestRoutes_UnmarshalJSON_Routes(t *testing.T) {
-	routes := unmarshalTestRouteNetwork(t)
+	routes := unmarshalTestNetwork(t)
 
-	abvRoute, found := routes.Routes["LON"]["ABV"]
+	abvRoute, found := routes.RouteMap["LON"]["ABV"]
 	if !found {
 		t.Fatal("route LON->ABV missing")
 	}
@@ -68,22 +73,22 @@ func TestRoutes_UnmarshalJSON_Routes(t *testing.T) {
 		t.Errorf("LON->ABV region wrong: %q", abvRoute.Region)
 	}
 
-	jfkRoute := routes.Routes["LON"]["JFK"]
+	jfkRoute := routes.RouteMap["LON"]["JFK"]
 	if jfkRoute.AviosPrices.Business.MaxAvios != 70000 || jfkRoute.AviosPrices.Economy.MinAvios != 0 {
 		t.Errorf("LON->JFK cabin prices wrong: %+v", jfkRoute)
 	}
 }
 
 func TestRoutes_Regions(t *testing.T) {
-	routes := unmarshalTestRouteNetwork(t)
+	routes := unmarshalTestNetwork(t)
 
 	regions := routes.Regions()
 	if len(regions) != 2 || regions[0] != "Africa" || regions[1] != "North America" {
 		t.Errorf("regions wrong: %+v", regions)
 	}
 
-	emptyRegions := RouteNetwork{}.Regions()
-	if emptyRegions != nil {
+	emptyRegions := Network{}.Regions()
+	if len(emptyRegions) != 0 {
 		t.Error("empty routes should have no regions")
 	}
 }
@@ -95,15 +100,18 @@ func TestRoutes_UnmarshalJSON_Empty(t *testing.T) {
 		t.Fatalf("unmarshal routes: %v", err)
 	}
 
-	routes := response.toRouteNetwork()
+	routes, err := response.toNetwork()
+	if err != nil {
+		t.Fatalf("convert routes: %v", err)
+	}
 
-	if routes.Airports == nil || routes.Routes == nil {
+	if routes.Airports == nil || routes.RouteMap == nil {
 		t.Error("maps should be initialised, not nil")
 	}
 }
 
 func TestRoutes_FindRoutes_All(t *testing.T) {
-	routes := unmarshalTestRouteNetwork(t)
+	routes := unmarshalTestNetwork(t)
 
 	allRoutes, err := routes.FindRoutes(FindRoutesInput{})
 	if err != nil {
@@ -127,7 +135,7 @@ func TestRoutes_FindRoutes_All(t *testing.T) {
 }
 
 func TestRoutes_FindRoutes_Origin(t *testing.T) {
-	routes := unmarshalTestRouteNetwork(t)
+	routes := unmarshalTestNetwork(t)
 
 	lonRoutes, err := routes.FindRoutes(FindRoutesInput{Origins: []string{"lon"}})
 	if err != nil {
@@ -154,7 +162,7 @@ func TestRoutes_FindRoutes_Origin(t *testing.T) {
 }
 
 func TestRoutes_FindRoutes_Destination(t *testing.T) {
-	routes := unmarshalTestRouteNetwork(t)
+	routes := unmarshalTestNetwork(t)
 
 	dubRoutes, err := routes.FindRoutes(FindRoutesInput{Destinations: []string{"dub"}})
 	if err != nil {
@@ -174,7 +182,7 @@ func TestRoutes_FindRoutes_Destination(t *testing.T) {
 }
 
 func TestRoutes_FindRoutes_Region(t *testing.T) {
-	routes := unmarshalTestRouteNetwork(t)
+	routes := unmarshalTestNetwork(t)
 
 	africaRoutes, err := routes.FindRoutes(FindRoutesInput{DestinationRegions: []string{"africa"}})
 	if err != nil {

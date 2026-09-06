@@ -1,6 +1,7 @@
 package gavios
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -9,13 +10,13 @@ import (
 	mapset "github.com/deckarep/golang-set/v2"
 )
 
-// RouteNetwork is the full route graph of airports and the routes between them.
-type RouteNetwork struct {
+// Network is the full route graph of airports and the routes between them.
+type Network struct {
 	// Airport code -> Airport details
 	Airports map[string]Airport
 
 	// Origin airport code -> Destination airport code -> Route details
-	Routes map[string]map[string]RouteDetails
+	RouteMap map[string]map[string]RouteDetails
 }
 
 // Airport is an airport with its location metadata.
@@ -55,18 +56,45 @@ type AviosPrice struct {
 	MaxAvios int `json:"maxAvios"`
 }
 
-// Regions returns geographic regions across all routes, sorted alphabetically.
-func (r RouteNetwork) Regions() []string {
-	regions := make(map[string]struct{})
-	for _, originRoutes := range r.Routes {
-		for _, details := range originRoutes {
-			if details.Region != "" {
-				regions[details.Region] = struct{}{}
-			}
+// Routes returns all routes in the network, ordered by origin then destination code.
+func (r Network) Routes() []Route {
+	routes := make([]Route, 0, len(r.RouteMap))
+
+	originCodes := slices.Sorted(maps.Keys(r.RouteMap))
+	for _, originCode := range originCodes {
+		originRoutes := r.RouteMap[originCode]
+
+		destinationCodes := slices.Sorted(maps.Keys(originRoutes))
+		for _, destinationCode := range destinationCodes {
+			routes = append(routes, Route{
+				Origin:      r.Airports[originCode],
+				Destination: r.Airports[destinationCode],
+				Details:     originRoutes[destinationCode],
+			})
 		}
 	}
 
-	return slices.Sorted(maps.Keys(regions))
+	return routes
+}
+
+// AirportCodes returns all airport codes in the network.
+func (r Network) AirportCodes() []string {
+	return slices.Collect(maps.Keys(r.Airports))
+}
+
+// Regions returns geographic regions across all routes, sorted alphabetically.
+func (r Network) Regions() []string {
+	allRoutes := r.Routes()
+	regions := mapset.NewSet[string]()
+	for _, route := range allRoutes {
+		if route.Details.Region != "" {
+			regions.Add(route.Details.Region)
+		}
+	}
+
+	regionsSlice := regions.ToSlice()
+	slices.Sort(regionsSlice)
+	return regionsSlice
 }
 
 // FindRoutesInput filters the routes returned by FindRoutes.
@@ -85,98 +113,81 @@ type FindRoutesInput struct {
 	DestinationRegions []string
 }
 
-// FindRoutes returns the routes matching the input, sorted by origin then
+// FindRoutes returns the routes matching the input, ordered by origin then
 // destination code. A zero-value input returns all routes.
-func (r RouteNetwork) FindRoutes(input FindRoutesInput) ([]Route, error) {
-	origins, err := NormalizeAirportCodes(input.Origins)
+func (r Network) FindRoutes(input FindRoutesInput) ([]Route, error) {
+	routes := r.Routes()
+
+	routes, err := r.filterRoutesByOriginDestination(routes, input.Origins, input.Destinations)
 	if err != nil {
 		return nil, err
 	}
 
-	destinations, err := NormalizeAirportCodes(input.Destinations)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, originCode := range origins {
-		if _, found := r.Routes[originCode]; !found {
-			return nil, fmt.Errorf("origin %q not found in routes", originCode)
-		}
-	}
-
-	routes := r.filterRoutesByOriginDestination(origins, destinations)
-
-	if (len(origins) > 0 || len(destinations) > 0) && len(routes) == 0 {
-		return nil, fmt.Errorf(
-			"destinations %s are not reachable from origins %s",
-			strings.Join(destinations, ", "), strings.Join(origins, ", "),
+	if len(routes) == 0 {
+		return nil, errors.New(
+			"no routes from specified origins to destination",
 		)
 	}
 
-	// Return if no region filtering wanted
-	if len(input.DestinationRegions) == 0 {
+	routes, err = r.filterRoutesByRegions(routes, input.DestinationRegions)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(routes) == 0 {
+		return nil, fmt.Errorf(
+			"no routes to specified destination regions: %s",
+			strings.Join(input.DestinationRegions, ", "),
+		)
+	}
+
+	return routes, nil
+}
+
+func (r Network) filterRoutesByOriginDestination(routes []Route, origins, destinations []string) ([]Route, error) {
+	origins, err := NormalizeAirportCodes(origins, r.AirportCodes())
+	if err != nil {
+		return nil, err
+	}
+
+	destinations, err = NormalizeAirportCodes(destinations, r.AirportCodes())
+	if err != nil {
+		return nil, err
+	}
+
+	originSet := mapset.NewSet(origins...)
+	destinationSet := mapset.NewSet(destinations...)
+
+	filteredRoutes := make([]Route, 0, len(routes))
+	for _, route := range routes {
+
+		if originSet.Cardinality() > 0 && !originSet.Contains(route.Origin.AirportCode) {
+			continue
+		}
+
+		if destinationSet.Cardinality() > 0 && !destinationSet.Contains(route.Destination.AirportCode) {
+			continue
+		}
+
+		filteredRoutes = append(filteredRoutes, route)
+	}
+
+	return slices.Clip(filteredRoutes), nil
+}
+
+func (r Network) filterRoutesByRegions(routes []Route, wantedRegions []string) ([]Route, error) {
+	validRegions := r.Regions()
+
+	wantedRegions, err := NormalizeRegions(wantedRegions, validRegions)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(wantedRegions) == 0 {
 		return routes, nil
 	}
 
-	return r.filterRoutesByRegions(routes, input.DestinationRegions)
-}
-
-func (r RouteNetwork) filterRoutesByOriginDestination(origins, destinations []string) []Route {
-	// Get ordered wanted origin codes
-	var wantedOrigins []string
-	if len(origins) == 0 {
-		wantedOrigins = slices.Sorted(maps.Keys(r.Routes))
-	} else {
-		wantedOrigins = origins
-		slices.Sort(origins)
-	}
-
-	wantedDestinations := mapset.NewSet(destinations...)
-
-	routes := make([]Route, 0)
-	for _, wantedOrigin := range wantedOrigins {
-
-		// Get destinations from the origin
-		originDestinations := r.Routes[wantedOrigin]
-		originDestinationCodes := slices.Sorted(maps.Keys(originDestinations))
-
-		for _, originDestinationCode := range originDestinationCodes {
-
-			// Skip if destination not in wanted destinations
-			if len(destinations) > 0 &&
-				!wantedDestinations.Contains(originDestinationCode) {
-				continue
-			}
-
-			routes = append(routes, Route{
-				Origin:      r.Airports[wantedOrigin],
-				Destination: r.Airports[originDestinationCode],
-				Details:     originDestinations[originDestinationCode],
-			})
-		}
-	}
-
-	return routes
-}
-
-func (r RouteNetwork) filterRoutesByRegions(routes []Route, wantedRegions []string) ([]Route, error) {
-	// Get valid regions
-	regions := r.Regions()
-	regionsSet := mapset.NewSetWithSize[string](len(regions))
-	for _, region := range regions {
-		regionsSet.Add(strings.ToLower(region))
-	}
-
-	// Validate wanted regions
-	wantedRegionSet := mapset.NewSet[string]()
-	for _, wantedRegion := range wantedRegions {
-		wantedRegion = strings.ToLower(wantedRegion)
-		if !regionsSet.Contains(wantedRegion) {
-			return nil, fmt.Errorf("invalid region code %q", wantedRegion)
-		}
-
-		wantedRegionSet.Add(wantedRegion)
-	}
+	wantedRegionSet := mapset.NewSet(wantedRegions...)
 
 	// Filter by regions
 	regionRoutes := make([]Route, 0, len(routes))

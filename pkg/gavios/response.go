@@ -14,27 +14,33 @@ type routesResponse struct {
 	Origins []routeOriginResponse `json:"origins"`
 }
 
-func (r routesResponse) toRouteNetwork() RouteNetwork {
-	network := RouteNetwork{
+func (r routesResponse) toNetwork() (Network, error) {
+	network := Network{
 		Airports: make(map[string]Airport),
-		Routes:   make(map[string]map[string]RouteDetails),
+		RouteMap: make(map[string]map[string]RouteDetails),
 	}
 
 	for _, origin := range r.Origins {
-		originAirport := origin.toAirport()
+		originAirport, err := origin.toAirport()
+		if err != nil {
+			return Network{}, err
+		}
 		network.Airports[originAirport.AirportCode] = originAirport
 
 		originRoutes := make(map[string]RouteDetails, len(origin.Destinations))
 		for _, destination := range origin.Destinations {
-			destinationAirport := destination.toAirport()
+			destinationAirport, err := destination.toAirport()
+			if err != nil {
+				return Network{}, err
+			}
 			network.Airports[destinationAirport.AirportCode] = destinationAirport
 			originRoutes[destinationAirport.AirportCode] = destination.toRouteDetails()
 		}
 
-		network.Routes[originAirport.AirportCode] = originRoutes
+		network.RouteMap[originAirport.AirportCode] = originRoutes
 	}
 
-	return network
+	return network, nil
 }
 
 type routeOriginResponse struct {
@@ -46,14 +52,19 @@ type routeOriginResponse struct {
 	Destinations []routeDestinationResponse `json:"destinations"`
 }
 
-func (r routeOriginResponse) toAirport() Airport {
+func (r routeOriginResponse) toAirport() (Airport, error) {
+	airportCode, err := NormalizeAirportCode(r.AirportCode, nil)
+	if err != nil {
+		return Airport{}, err
+	}
+
 	return Airport{
-		AirportCode: r.AirportCode,
+		AirportCode: airportCode,
 		AirportName: r.AirportName,
 		CountryCode: r.CountryCode,
 		Country:     r.Country,
 		City:        r.City,
-	}
+	}, nil
 }
 
 type routeDestinationResponse struct {
@@ -67,14 +78,19 @@ type routeDestinationResponse struct {
 	AviosPrices aviosPricesResponse `json:"aviosPerCabinClass"`
 }
 
-func (r routeDestinationResponse) toAirport() Airport {
+func (r routeDestinationResponse) toAirport() (Airport, error) {
+	airportCode, err := NormalizeAirportCode(r.AirportCode, nil)
+	if err != nil {
+		return Airport{}, err
+	}
+
 	return Airport{
-		AirportCode: r.AirportCode,
+		AirportCode: airportCode,
 		AirportName: r.AirportName,
 		CountryCode: r.CountryCode,
 		Country:     r.Country,
 		City:        r.City,
-	}
+	}, nil
 }
 
 func (r routeDestinationResponse) toRouteDetails() RouteDetails {

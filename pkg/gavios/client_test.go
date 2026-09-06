@@ -78,12 +78,12 @@ func TestClient_Routes(t *testing.T) {
 			return httpmock.NewStringResponse(200, routesResp), nil
 		})
 
-	routes, err := client.RouteNetwork(context.Background())
+	routes, err := client.Network(context.Background())
 	require.NoError(t, err)
 	require.Len(t, routes.Airports, 2)
 	assert.Equal(t, Airport{AirportCode: "LON", AirportName: "London Heathrow", City: "London", Country: "United Kingdom"}, routes.Airports["LON"])
-	require.Contains(t, routes.Routes, "LON")
-	destination, found := routes.Routes["LON"]["ABV"]
+	require.Contains(t, routes.RouteMap, "LON")
+	destination, found := routes.RouteMap["LON"]["ABV"]
 	require.True(t, found, "route LON->ABV should exist")
 	assert.Equal(t, "Abuja", routes.Airports["ABV"].City)
 	assert.Equal(t, 100, destination.AviosPrices.Economy.MinAvios)
@@ -93,10 +93,6 @@ func TestClient_Routes(t *testing.T) {
 	assert.Equal(t, "true", query.Get("ByAirport"))
 	assert.Equal(t, "1", query.Get("Adults"))
 	assert.Equal(t, "false", query.Get("OneWay"))
-
-	upper, err := NormalizeAirportCode("lon")
-	require.NoError(t, err)
-	assert.Equal(t, "LON", upper)
 }
 
 const routeFlightsJSON = `{"availabilityPerCabin":{"Economy":{"outbound":{"flightsPerDate":` +
@@ -138,15 +134,31 @@ func TestClient_RouteFlights(t *testing.T) {
 	assert.Equal(t, "false", query.Get("IncludeNonBookableFlights"))
 }
 
+func TestNormalizeRegion(t *testing.T) {
+	lower, err := NormalizeRegion("Africa", nil)
+	require.NoError(t, err)
+	assert.Equal(t, "africa", lower)
+
+	_, err = NormalizeRegion("Atlantis", []string{"Africa", "Europe"})
+	require.Error(t, err, "region %q not in valid regions should be rejected", "Atlantis")
+
+	lower, err = NormalizeRegion("AFRICA", []string{"africa", "europe"})
+	require.NoError(t, err)
+	assert.Equal(t, "africa", lower)
+}
+
 func TestNormalizeAirportCode(t *testing.T) {
-	upper, err := NormalizeAirportCode("lon")
+	upper, err := NormalizeAirportCode("lon", nil)
 	require.NoError(t, err)
 	assert.Equal(t, "LON", upper)
 
 	for _, bad := range []string{"", "LO", "LONN", "L0N", "12A"} {
-		_, err := NormalizeAirportCode(bad)
-		assert.Error(t, err, "code %q should be rejected", bad)
+		_, err := NormalizeAirportCode(bad, nil)
+		require.Error(t, err, "code %q should be rejected", bad)
 	}
+
+	_, err = NormalizeAirportCode("lon", []string{"MAN", "DUB"})
+	require.Error(t, err, "code %q not in valid codes should be rejected", "lon")
 }
 
 func TestClient_RetryOn429(t *testing.T) {

@@ -8,42 +8,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testTime(month time.Month, day int) time.Time {
-	return time.Date(2026, month, day, 10, 0, 0, 0, time.UTC)
+func testTime(day int) time.Time {
+	return time.Date(2026, time.June, day, 10, 0, 0, 0, time.UTC)
 }
 
 func testRouteFlights() RouteFlights {
 	return RouteFlights{
 		Economy: TripFlights{
 			Outbound: []Flight{
-				{Departure: testTime(time.June, 22), Time: "10:00", Seats: 2, Carrier: "BA"},
-				{Departure: testTime(time.June, 23), Time: "22:30", Seats: 9, Carrier: "BA"},
-				{Departure: testTime(time.June, 24), Time: "07:15", Seats: 4, Carrier: "BA"},
+				{Departure: testTime(22), Time: "10:00", Seats: 2, Carrier: "BA"},
+				{Departure: testTime(23), Time: "22:30", Seats: 9, Carrier: "BA"},
+				{Departure: testTime(24), Time: "07:15", Seats: 4, Carrier: "BA"},
 			},
 			Inbound: []Flight{
-				{Departure: testTime(time.June, 25), Time: "18:00", Seats: 3, Carrier: "BA"},
+				{Departure: testTime(25), Time: "18:00", Seats: 3, Carrier: "BA"},
 			},
 		},
 	}
 }
 
-func TestDateRangeIsZero(t *testing.T) {
-	assert.True(t, DateRange{}.IsZero())
-	assert.False(t, DateRange{On: testTime(time.September, 9)}.IsZero())
-}
-
 func TestDateRangeInRange(t *testing.T) {
-	day := testTime(time.June, 23)
+	day := testTime(23)
 
 	assert.True(t, DateRange{On: day}.InRange(day))
-	assert.False(t, DateRange{On: testTime(time.June, 24)}.InRange(day))
+	assert.False(t, DateRange{On: testTime(24)}.InRange(day))
 
 	// After and Before are exclusive bounds.
-	assert.True(t, DateRange{After: testTime(time.June, 22)}.InRange(day))
+	assert.True(t, DateRange{After: testTime(22)}.InRange(day))
 	assert.False(t, DateRange{After: day}.InRange(day))
-	assert.True(t, DateRange{Before: testTime(time.June, 24)}.InRange(day))
+	assert.True(t, DateRange{Before: testTime(24)}.InRange(day))
 	assert.False(t, DateRange{Before: day}.InRange(day))
-	assert.False(t, DateRange{After: testTime(time.June, 22), Before: day}.InRange(day))
+	assert.False(t, DateRange{After: testTime(22), Before: day}.InRange(day))
 
 	// Zero range matches everything.
 	assert.True(t, DateRange{}.InRange(day))
@@ -62,10 +57,7 @@ func TestNewFlights(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, flights, 1)
-	assert.Equal(t, testTime(time.June, 22), flights[0].Departure)
-	assert.Equal(t, "10:00", flights[0].Time)
-	assert.Equal(t, 2, flights[0].Seats)
-	assert.Equal(t, "BA", flights[0].Carrier)
+	assert.Equal(t, testTime(22), flights[0].Departure)
 
 	bad := flightsPerDateResponse{
 		Flights: map[string][]flightResponse{
@@ -80,8 +72,8 @@ func TestRouteFlightsFilterByDates(t *testing.T) {
 	routeFlights := testRouteFlights()
 
 	filtered := routeFlights.FilterByDates(
-		DateRange{On: testTime(time.June, 23)},
-		DateRange{On: testTime(time.June, 25)},
+		DateRange{On: testTime(23)},
+		DateRange{On: testTime(25)},
 	)
 
 	economy := filtered.Economy

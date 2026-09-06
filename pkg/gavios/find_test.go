@@ -3,7 +3,6 @@ package gavios
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
@@ -66,7 +65,7 @@ func TestFindFlights_UnknownDestination(t *testing.T) {
 		Destinations: []string{"SYD"},
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "destinations SYD are not reachable from origins LON")
+	assert.Contains(t, err.Error(), `unknown airport code "SYD"`)
 }
 
 func TestFindFlights_RegionFilter(t *testing.T) {
@@ -100,8 +99,7 @@ func TestFindFlights_UnknownRegion(t *testing.T) {
 		DestinationRegions: []string{"Space"},
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid region code")
-	assert.Contains(t, err.Error(), "space")
+	assert.Contains(t, err.Error(), `unknown region "Space"`)
 }
 
 func TestFindFlights_DateFilterFlights(t *testing.T) {
@@ -116,7 +114,7 @@ func TestFindFlights_DateFilterFlights(t *testing.T) {
 
 	found, err := client.FindFlights(context.Background(), FindFlightsInput{
 		Origins:  []string{"LON"},
-		Outbound: DateRange{On: testTime(time.June, 23)},
+		Outbound: DateRange{On: testTime(23)},
 	})
 	require.NoError(t, err)
 	require.Len(t, found, 2)

@@ -33,7 +33,7 @@ type FoundFlights struct {
 // FindFlights find flights relevant to a filtering input
 func (c *Client) FindFlights(ctx context.Context, input FindFlightsInput) ([]FoundFlights, error) {
 	// Find routes relevant to the input
-	network, err := c.RouteNetwork(ctx)
+	network, err := c.Network(ctx)
 	if err != nil {
 		return nil, err
 	}
