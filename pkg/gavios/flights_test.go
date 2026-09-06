@@ -70,10 +70,12 @@ func TestRouteFlightsFilterByDates(t *testing.T) {
 		DateRange{On: testTime(time.June, 23)},
 		DateRange{On: testTime(time.June, 25)},
 	)
-	require.Len(t, filtered.Economy.Outbound, 1)
-	assert.Equal(t, "22:30", filtered.Economy.Outbound[0].Time)
-	require.Len(t, filtered.Economy.Inbound, 1)
-	assert.Equal(t, "18:00", filtered.Economy.Inbound[0].Time)
+
+	economy := filtered.Economy
+	require.Len(t, economy.Outbound, 1)
+	assert.Equal(t, "22:30", economy.Outbound[0].Time)
+	require.Len(t, economy.Inbound, 1)
+	assert.Equal(t, "18:00", economy.Inbound[0].Time)
 
 	unchanged := routeFlights.FilterByDates(DateRange{}, DateRange{})
 	assert.Equal(t, routeFlights, unchanged)

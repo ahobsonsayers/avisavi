@@ -31,9 +31,9 @@ type FindFlightsInput struct {
 }
 
 type FoundFlights struct {
-	Origin      Airport
-	Destination Airport
-	Flights     RouteFlights
+	Origin       Airport
+	Destination  Airport
+	RouteFlights RouteFlights
 }
 
 // FindFlights find flights relevant to a filtering input
@@ -58,12 +58,14 @@ func (c *Client) FindFlights(ctx context.Context, input FindFlightsInput) ([]Fou
 			return nil, err
 		}
 
+		flightInDates := routeFlights.FilterByDates(input.Outbound, input.Return)
+
 		flights = append(
 			flights,
 			FoundFlights{
-				Origin:      route.Origin,
-				Destination: route.Destination,
-				Flights:     routeFlights.FilterByDates(input.Outbound, input.Return),
+				Origin:       route.Origin,
+				Destination:  route.Destination,
+				RouteFlights: flightInDates,
 			},
 		)
 	}

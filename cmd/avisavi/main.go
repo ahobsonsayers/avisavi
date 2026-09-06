@@ -15,7 +15,7 @@ import (
 var rootCmd = &cli.Command{
 	Name:  "avisavi",
 	Usage: "Avios Reward Flight CLI",
-	Description: `Search and check Avios reward flights from the terminal.
+	Description: `Find and check Avios reward flights from the terminal.
 
 Before using any command, run 'avisavi login' to authenticate.
 Configuration is read from environment variables.
@@ -24,14 +24,12 @@ Examples:
   avisavi login
   avisavi balance
   avisavi routes --origin LON
-  avisavi availability --origin LON --destination NYC
-  avisavi search --origin LON --outbound 2026-09-09 --return 2026-09-13`,
+  avisavi find --origin LON --outbound 2026-09-09 --return 2026-09-13`,
 	Commands: []*cli.Command{
 		loginCmd,
 		balanceCmd,
 		routesCmd,
-		availabilityCmd,
-		searchCmd,
+		findCmd,
 	},
 }
 

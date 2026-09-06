@@ -86,6 +86,7 @@ func (c *Client) RouteNetwork(ctx context.Context, adults int, oneWay bool) (Rou
 	return routes, nil
 }
 
+// RouteFlights fetches the reward flights on a route
 func (c *Client) RouteFlights(
 	ctx context.Context,
 	origin, destination string,

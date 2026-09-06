@@ -121,8 +121,9 @@ func TestFindFlights_DateFilterFlights(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, found, 2)
 	for _, route := range found {
-		require.Len(t, route.Flights.Economy.Outbound, 2)
-		assert.Equal(t, "2026-06-23T08:30:00", route.Flights.Economy.Outbound[0].Departure.Format(departureTimeLayout))
-		assert.Equal(t, "2026-06-23T21:00:00", route.Flights.Economy.Outbound[1].Departure.Format(departureTimeLayout))
+		economy := route.RouteFlights.Economy
+		require.Len(t, economy.Outbound, 2)
+		assert.Equal(t, "2026-06-23T08:30:00", economy.Outbound[0].Departure.Format(departureTimeLayout))
+		assert.Equal(t, "2026-06-23T21:00:00", economy.Outbound[1].Departure.Format(departureTimeLayout))
 	}
 }

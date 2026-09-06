@@ -50,7 +50,7 @@ func (flight *Flight) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// TripFlights holds the flights for a trip, split by travel direction.
+// TripFlights holds the flights of a trip split by direction.
 type TripFlights struct {
 	// Outbound holds the outbound flights, ordered by departure date.
 	Outbound []Flight
@@ -91,12 +91,25 @@ func (t *TripFlights) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// RouteFlights describes the reward flights on a route, grouped by cabin class.
+// RouteFlights describes the reward flights on a route per cabin class.
 type RouteFlights struct {
 	Economy  TripFlights
 	Premium  TripFlights
 	Business TripFlights
 	First    TripFlights
+}
+
+func (r RouteFlights) FilterByDates(outboundDate, returnDate DateRange) RouteFlights {
+	if outboundDate.IsZero() && returnDate.IsZero() {
+		return r
+	}
+
+	return RouteFlights{
+		Economy:  r.Economy.FilterByDates(outboundDate, returnDate),
+		Premium:  r.Premium.FilterByDates(outboundDate, returnDate),
+		Business: r.Business.FilterByDates(outboundDate, returnDate),
+		First:    r.First.FilterByDates(outboundDate, returnDate),
+	}
 }
 
 func (r *RouteFlights) UnmarshalJSON(data []byte) error {
@@ -117,11 +130,13 @@ func (r *RouteFlights) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	cabins := response.AvailabilityPerCabin
-	r.Economy = cabins.Economy
-	r.Premium = cabins.Premium
-	r.Business = cabins.Business
-	r.First = cabins.First
+	availability := response.AvailabilityPerCabin
+	*r = RouteFlights{
+		Economy:  availability.Economy,
+		Premium:  availability.Premium,
+		Business: availability.Business,
+		First:    availability.First,
+	}
 
 	return nil
 }
@@ -142,19 +157,6 @@ func flightMapToSlice(flightMap map[string][]Flight) []Flight {
 	)
 
 	return flights
-}
-
-func (r RouteFlights) FilterByDates(outboundDate, returnDate DateRange) RouteFlights {
-	if outboundDate.IsZero() && returnDate.IsZero() {
-		return r
-	}
-
-	return RouteFlights{
-		Economy:  r.Economy.FilterByDates(outboundDate, returnDate),
-		Premium:  r.Premium.FilterByDates(outboundDate, returnDate),
-		Business: r.Business.FilterByDates(outboundDate, returnDate),
-		First:    r.First.FilterByDates(outboundDate, returnDate),
-	}
 }
 
 func filterFlightsByDate(flights []Flight, dateRange DateRange) []Flight {
