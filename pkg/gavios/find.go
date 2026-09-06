@@ -33,7 +33,18 @@ type FoundFlights struct {
 // FindFlights find flights relevant to a filtering input
 func (c *Client) FindFlights(ctx context.Context, input FindFlightsInput) ([]FoundFlights, error) {
 	// Find routes relevant to the input
-	routes, err := c.findRoutes(ctx, input)
+	network, err := c.RouteNetwork(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	routes, err := network.FindRoutes(
+		FindRoutesInput{
+			Origins:            input.Origins,
+			Destinations:       input.Destinations,
+			DestinationRegions: input.DestinationRegions,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -65,19 +76,4 @@ func (c *Client) FindFlights(ctx context.Context, input FindFlightsInput) ([]Fou
 	}
 
 	return flights, nil
-}
-
-// findRoutes find the routes relevant to the find flights input.
-// This just finds routes - nothing about tickets or availability.
-func (c *Client) findRoutes(ctx context.Context, input FindFlightsInput) ([]Route, error) {
-	network, err := c.RouteNetwork(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return network.FindRoutes(FindRoutesInput{
-		Origins:            input.Origins,
-		Destinations:       input.Destinations,
-		DestinationRegions: input.DestinationRegions,
-	})
 }
