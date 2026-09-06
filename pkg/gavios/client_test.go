@@ -113,7 +113,7 @@ func TestClient_RouteFlights(t *testing.T) {
 			return httpmock.NewStringResponse(200, routeFlightsJSON), nil
 		})
 
-	routeFlights, err := client.RouteFlights(context.Background(), "LON", "ABV", false, 1)
+	routeFlights, err := client.getAviosAllCabins(context.Background(), "LON", "ABV", false, 1)
 	require.NoError(t, err)
 
 	// Flights are ordered by full departure timestamp.
@@ -160,7 +160,7 @@ func TestClient_RetryOn429(t *testing.T) {
 			return httpmock.NewStringResponse(200, routeFlightsJSON), nil
 		})
 
-	_, err := client.RouteFlights(context.Background(), "LON", "ABV", false, 1)
+	_, err := client.getAviosAllCabins(context.Background(), "LON", "ABV", false, 1)
 	require.NoError(t, err)
 	assert.Equal(t, 2, calls)
 }

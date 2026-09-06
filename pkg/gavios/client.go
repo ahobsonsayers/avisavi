@@ -86,8 +86,8 @@ func (c *Client) RouteNetwork(ctx context.Context) (RouteNetwork, error) {
 	return routes, nil
 }
 
-// RouteFlights fetches the reward flights on a route
-func (c *Client) RouteFlights(
+// getAviosAllCabins calls the avios all cabins endpoint
+func (c *Client) getAviosAllCabins(
 	ctx context.Context,
 	origin, destination string,
 	oneWay bool,
