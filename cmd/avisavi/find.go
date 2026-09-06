@@ -46,7 +46,11 @@ Examples:
 			Usage: "destination region e.g. \"North America\" (repeatable)",
 		},
 		&cli.StringFlag{Name: "outbound", Usage: "outbound date YYYY-MM-DD"},
+		&cli.StringFlag{Name: "outbound-after", Usage: "outbound after date YYYY-MM-DD (exclusive)"},
+		&cli.StringFlag{Name: "outbound-before", Usage: "outbound before date YYYY-MM-DD (exclusive)"},
 		&cli.StringFlag{Name: "return", Usage: "return date YYYY-MM-DD"},
+		&cli.StringFlag{Name: "return-after", Usage: "return after date YYYY-MM-DD (exclusive)"},
+		&cli.StringFlag{Name: "return-before", Usage: "return before date YYYY-MM-DD (exclusive)"},
 		&cli.IntFlag{Name: "adults", Aliases: []string{"a"}, Value: 1, Usage: "number of adults"},
 		&cli.BoolFlag{Name: "one-way", Usage: "one-way flights only"},
 		&cli.StringFlag{
@@ -106,6 +110,18 @@ func findInput(cmd *cli.Command) (gavios.FindFlightsInput, error) {
 		input.Outbound = gavios.DateRange{On: outboundDate}
 	}
 
+	outboundRange, err := parseBoundDates(cmd, "outbound")
+	if err != nil {
+		return input, err
+	}
+	input.Outbound.After = outboundRange.After
+	input.Outbound.Before = outboundRange.Before
+
+	returnRange, err := parseBoundDates(cmd, "return")
+	if err != nil {
+		return input, err
+	}
+
 	returnDate := cmd.String("return")
 	if returnDate != "" {
 		returnDateParsed, err := time.Parse("2006-01-02", returnDate)
@@ -115,7 +131,36 @@ func findInput(cmd *cli.Command) (gavios.FindFlightsInput, error) {
 		input.Return = gavios.DateRange{On: returnDateParsed}
 	}
 
+	input.Return.After = returnRange.After
+	input.Return.Before = returnRange.Before
+
 	return input, nil
+}
+
+// parseBoundDates parses the -after and -before flags for the given
+// direction ("outbound" or "return") into a DateRange.
+func parseBoundDates(cmd *cli.Command, direction string) (gavios.DateRange, error) {
+	var dateRange gavios.DateRange
+
+	after := cmd.String(direction + "-after")
+	if after != "" {
+		afterDate, err := time.Parse("2006-01-02", after)
+		if err != nil {
+			return dateRange, fmt.Errorf("invalid %s-after date %q: %w", direction, after, err)
+		}
+		dateRange.After = afterDate
+	}
+
+	before := cmd.String(direction + "-before")
+	if before != "" {
+		beforeDate, err := time.Parse("2006-01-02", before)
+		if err != nil {
+			return dateRange, fmt.Errorf("invalid %s-before date %q: %w", direction, before, err)
+		}
+		dateRange.Before = beforeDate
+	}
+
+	return dateRange, nil
 }
 
 // cabinFlights pairs a cabin name with its flights.
