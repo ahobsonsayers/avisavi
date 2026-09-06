@@ -46,12 +46,12 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	routes, err := client.RouteNetwork(ctx)
+	network, err := client.Network(ctx)
 	if err != nil {
 		return err
 	}
 
-	routeList, err := routes.FindRoutes(gavios.FindRoutesInput{
+	routes, err := network.FindRoutes(gavios.FindRoutesInput{
 		Origins:            cmd.StringSlice("origin"),
 		Destinations:       cmd.StringSlice("destination"),
 		DestinationRegions: cmd.StringSlice("region"),
@@ -61,11 +61,11 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	if cmd.Bool("json") {
-		return printJSON(routeList)
+		return printJSON(routes)
 	}
 
-	rows := make([][]string, 0, len(routeList))
-	for _, route := range routeList {
+	rows := make([][]string, 0, len(routes))
+	for _, route := range routes {
 		origin := fmt.Sprintf("%s (%s)", route.Origin.City, route.Origin.AirportCode)
 		destination := fmt.Sprintf("%s (%s)", route.Destination.City, route.Destination.AirportCode)
 
