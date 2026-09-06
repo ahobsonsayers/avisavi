@@ -100,41 +100,12 @@ func TestRoutes_UnmarshalJSON_Empty(t *testing.T) {
 	}
 }
 
-func TestRoutes_GetRoute(t *testing.T) {
+func TestRoutes_FindRoutes_All(t *testing.T) {
 	routes := unmarshalTestRouteNetwork(t)
 
-	route, err := routes.GetRoute("lon", "abv")
+	allRoutes, err := routes.FindRoutes(FindRoutesInput{})
 	if err != nil {
-		t.Fatalf("GetRoute(lon, abv): %v", err)
-	}
-
-	if route.Origin.AirportCode != "LON" || route.Destination.AirportCode != "ABV" {
-		t.Errorf("airports wrong: origin=%+v destination=%+v", route.Origin, route.Destination)
-	}
-	if route.Details.Region != "Africa" {
-		t.Errorf("details wrong: %+v", route.Details)
-	}
-
-	_, err = routes.GetRoute("JFK", "ABV")
-	if err == nil {
-		t.Error("unknown origin should error")
-	}
-	_, err = routes.GetRoute("LON", "LON")
-	if err == nil {
-		t.Error("unknown destination should error")
-	}
-	_, err = routes.GetRoute("XYZ", "ABV")
-	if err == nil {
-		t.Error("invalid code should error")
-	}
-}
-
-func TestRoutes_GetRoutes_All(t *testing.T) {
-	routes := unmarshalTestRouteNetwork(t)
-
-	allRoutes, err := routes.GetRoutes("")
-	if err != nil {
-		t.Fatalf("GetRoutes(): %v", err)
+		t.Fatalf("FindRoutes(FindRoutesInput{}): %v", err)
 	}
 	if len(allRoutes) != 3 {
 		t.Fatalf("expected 3 routes, got %d", len(allRoutes))
@@ -153,12 +124,12 @@ func TestRoutes_GetRoutes_All(t *testing.T) {
 	}
 }
 
-func TestRoutes_GetRoutes_Origin(t *testing.T) {
+func TestRoutes_FindRoutes_Origin(t *testing.T) {
 	routes := unmarshalTestRouteNetwork(t)
 
-	lonRoutes, err := routes.GetRoutes("lon")
+	lonRoutes, err := routes.FindRoutes(FindRoutesInput{Origins: []string{"lon"}})
 	if err != nil {
-		t.Fatalf("GetRoutes(lon): %v", err)
+		t.Fatalf("FindRoutes(lon): %v", err)
 	}
 	if len(lonRoutes) != 2 {
 		t.Fatalf("expected 2 LON routes, got %d", len(lonRoutes))
@@ -170,12 +141,52 @@ func TestRoutes_GetRoutes_Origin(t *testing.T) {
 		t.Errorf("route details missing: %+v", lonRoutes[0].Details)
 	}
 
-	_, err = routes.GetRoutes("JFK")
+	_, err = routes.FindRoutes(FindRoutesInput{Origins: []string{"JFK"}})
 	if err == nil {
 		t.Error("unknown origin should error")
 	}
-	_, err = routes.GetRoutes("12")
+	_, err = routes.FindRoutes(FindRoutesInput{Origins: []string{"12"}})
 	if err == nil {
 		t.Error("invalid code should error")
+	}
+}
+
+func TestRoutes_FindRoutes_Destination(t *testing.T) {
+	routes := unmarshalTestRouteNetwork(t)
+
+	dubRoutes, err := routes.FindRoutes(FindRoutesInput{Destinations: []string{"dub"}})
+	if err != nil {
+		t.Fatalf("FindRoutes(dub): %v", err)
+	}
+	if len(dubRoutes) != 1 {
+		t.Fatalf("expected 1 DUB route, got %d", len(dubRoutes))
+	}
+	if dubRoutes[0].Origin.AirportCode != "MAN" || dubRoutes[0].Destination.AirportCode != "DUB" {
+		t.Errorf("airports wrong: %+v -> %+v", dubRoutes[0].Origin, dubRoutes[0].Destination)
+	}
+
+	_, err = routes.FindRoutes(FindRoutesInput{Destinations: []string{"SYD"}})
+	if err == nil {
+		t.Error("unreachable destination should error")
+	}
+}
+
+func TestRoutes_FindRoutes_Region(t *testing.T) {
+	routes := unmarshalTestRouteNetwork(t)
+
+	africaRoutes, err := routes.FindRoutes(FindRoutesInput{DestinationRegions: []string{"africa"}})
+	if err != nil {
+		t.Fatalf("FindRoutes(africa): %v", err)
+	}
+	if len(africaRoutes) != 1 {
+		t.Fatalf("expected 1 Africa route, got %d", len(africaRoutes))
+	}
+	if africaRoutes[0].Destination.AirportCode != "ABV" {
+		t.Errorf("wrong route: %+v", africaRoutes[0])
+	}
+
+	_, err = routes.FindRoutes(FindRoutesInput{DestinationRegions: []string{"Oceania"}})
+	if err == nil {
+		t.Error("invalid region should error")
 	}
 }
