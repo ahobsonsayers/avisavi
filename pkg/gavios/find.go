@@ -52,7 +52,7 @@ func (c *Client) FindFlights(ctx context.Context, input FindFlightsInput) ([]Fou
 	// Find flights for the routes and the input (adults, dater range etc)
 	flights := make([]FoundFlights, 0, len(routes))
 	for _, route := range routes {
-		routeFlights, err := c.getAviosAllCabins(
+		routeFlights, err := c.RouteFlights(
 			ctx,
 			route.Origin.AirportCode,
 			route.Destination.AirportCode,

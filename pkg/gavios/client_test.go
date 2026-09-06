@@ -2,6 +2,7 @@ package gavios
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -45,8 +46,11 @@ func TestClient_AuthHeader(t *testing.T) {
 					return httpmock.NewStringResponse(200, `{}`), nil
 				})
 
+			raw, err := client.get(context.Background(), tt.path, nil)
+			require.NoError(t, err)
+
 			var out map[string]any
-			require.NoError(t, client.get(context.Background(), tt.path, nil, &out))
+			require.NoError(t, json.Unmarshal(raw, &out))
 
 			require.NotNil(t, captured)
 			assert.Equal(t, "Bearer "+testToken, captured.Header.Get("Authorization"))
@@ -113,7 +117,7 @@ func TestClient_RouteFlights(t *testing.T) {
 			return httpmock.NewStringResponse(200, routeFlightsJSON), nil
 		})
 
-	routeFlights, err := client.getAviosAllCabins(context.Background(), "LON", "ABV", false, 1)
+	routeFlights, err := client.RouteFlights(context.Background(), "LON", "ABV", false, 1)
 	require.NoError(t, err)
 
 	// Flights are ordered by full departure timestamp.
@@ -160,7 +164,7 @@ func TestClient_RetryOn429(t *testing.T) {
 			return httpmock.NewStringResponse(200, routeFlightsJSON), nil
 		})
 
-	_, err := client.getAviosAllCabins(context.Background(), "LON", "ABV", false, 1)
+	_, err := client.RouteFlights(context.Background(), "LON", "ABV", false, 1)
 	require.NoError(t, err)
 	assert.Equal(t, 2, calls)
 }

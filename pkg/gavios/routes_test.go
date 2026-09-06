@@ -27,13 +27,13 @@ const routesJSON = `{"origins":[` +
 func unmarshalTestRouteNetwork(t *testing.T) RouteNetwork {
 	t.Helper()
 
-	var routes RouteNetwork
-	err := json.Unmarshal([]byte(routesJSON), &routes)
+	var response routesResponse
+	err := json.Unmarshal([]byte(routesJSON), &response)
 	if err != nil {
 		t.Fatalf("unmarshal routes: %v", err)
 	}
 
-	return routes
+	return response.toRouteNetwork()
 }
 
 func TestRoutes_UnmarshalJSON_Airports(t *testing.T) {
@@ -89,11 +89,13 @@ func TestRoutes_Regions(t *testing.T) {
 }
 
 func TestRoutes_UnmarshalJSON_Empty(t *testing.T) {
-	var routes RouteNetwork
-	err := json.Unmarshal([]byte(`{"origins":[]}`), &routes)
+	var response routesResponse
+	err := json.Unmarshal([]byte(`{"origins":[]}`), &response)
 	if err != nil {
 		t.Fatalf("unmarshal routes: %v", err)
 	}
+
+	routes := response.toRouteNetwork()
 
 	if routes.Airports == nil || routes.Routes == nil {
 		t.Error("maps should be initialised, not nil")

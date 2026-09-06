@@ -1,7 +1,6 @@
 package gavios
 
 import (
-	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -24,36 +23,36 @@ type Airport struct {
 	AirportCode string `json:"airportCode"`
 	AirportName string `json:"airportName"`
 	CountryCode string `json:"countryCode,omitempty"`
-	Country     string `json:"countryName"`
-	City        string `json:"name"`
+	Country     string `json:"country"`
+	City        string `json:"city"`
 }
 
 // Route is a route between two airports, with the route details.
 type Route struct {
-	Origin      Airport
-	Destination Airport
-	Details     RouteDetails
+	Origin      Airport      `json:"origin"`
+	Destination Airport      `json:"destination"`
+	Details     RouteDetails `json:"details"`
 }
 
 // RouteDetails is everything known about a route, excluding its airports.
 type RouteDetails struct {
-	Region      string
-	FlownBy     []string    `json:"flownByPartners"`
-	AviosPrices AviosPrices `json:"aviosPerCabinClass"`
+	Region      string      `json:"region"`
+	FlownBy     []string    `json:"flownBy"`
+	AviosPrices AviosPrices `json:"aviosPrices"`
 }
 
 // AviosPrices gives the Avios price range per cabin class.
 type AviosPrices struct {
-	Economy  AviosPrice `json:"Economy"`
-	Premium  AviosPrice `json:"Premium"`
-	Business AviosPrice `json:"Business"`
-	First    AviosPrice `json:"First"`
+	Economy  AviosPrice `json:"economy"`
+	Premium  AviosPrice `json:"premium"`
+	Business AviosPrice `json:"business"`
+	First    AviosPrice `json:"first"`
 }
 
 // AviosPrice is the min and max Avios for one cabin class on a route.
 type AviosPrice struct {
-	MinAvios int `json:"min"`
-	MaxAvios int `json:"max"`
+	MinAvios int `json:"minAvios"`
+	MaxAvios int `json:"maxAvios"`
 }
 
 // Regions returns geographic regions across all routes, sorted alphabetically.
@@ -105,7 +104,7 @@ func (r RouteNetwork) FindRoutes(input FindRoutesInput) ([]Route, error) {
 		}
 	}
 
-	routes := filterRoutesByOriginDestination(r, origins, destinations)
+	routes := r.filterRoutesByOriginDestination(origins, destinations)
 
 	if (len(origins) > 0 || len(destinations) > 0) && len(routes) == 0 {
 		return nil, fmt.Errorf(
@@ -119,6 +118,48 @@ func (r RouteNetwork) FindRoutes(input FindRoutesInput) ([]Route, error) {
 		return routes, nil
 	}
 
+	return r.filterRoutesByRegions(routes, input.DestinationRegions)
+}
+
+func (r RouteNetwork) filterRoutesByOriginDestination(origins, destinations []string) []Route {
+	// Get ordered wanted origin codes
+	var wantedOrigins []string
+	if len(origins) == 0 {
+		wantedOrigins = slices.Sorted(maps.Keys(r.Routes))
+	} else {
+		wantedOrigins = origins
+		slices.Sort(origins)
+	}
+
+	wantedDestinations := mapset.NewSet(destinations...)
+
+	routes := make([]Route, 0)
+	for _, wantedOrigin := range wantedOrigins {
+
+		// Get destinations from the origin
+		originDestinations := r.Routes[wantedOrigin]
+		originDestinationCodes := slices.Sorted(maps.Keys(originDestinations))
+
+		for _, originDestinationCode := range originDestinationCodes {
+
+			// Skip if destination not in wanted destinations
+			if len(destinations) > 0 &&
+				!wantedDestinations.Contains(originDestinationCode) {
+				continue
+			}
+
+			routes = append(routes, Route{
+				Origin:      r.Airports[wantedOrigin],
+				Destination: r.Airports[originDestinationCode],
+				Details:     originDestinations[originDestinationCode],
+			})
+		}
+	}
+
+	return routes
+}
+
+func (r RouteNetwork) filterRoutesByRegions(routes []Route, wantedRegions []string) ([]Route, error) {
 	// Get valid regions
 	regions := r.Regions()
 	regionsSet := mapset.NewSetWithSize[string](len(regions))
@@ -128,7 +169,7 @@ func (r RouteNetwork) FindRoutes(input FindRoutesInput) ([]Route, error) {
 
 	// Validate wanted regions
 	wantedRegionSet := mapset.NewSet[string]()
-	for _, wantedRegion := range input.DestinationRegions {
+	for _, wantedRegion := range wantedRegions {
 		wantedRegion = strings.ToLower(wantedRegion)
 		if !regionsSet.Contains(wantedRegion) {
 			return nil, fmt.Errorf("invalid region code %q", wantedRegion)
@@ -147,150 +188,4 @@ func (r RouteNetwork) FindRoutes(input FindRoutesInput) ([]Route, error) {
 	}
 
 	return slices.Clip(regionRoutes), nil
-}
-
-func (r *RouteNetwork) UnmarshalJSON(data []byte) error {
-	type originResponse struct {
-		Destinations []json.RawMessage `json:"destinations"`
-	}
-
-	type routesResponse struct {
-		Origins []json.RawMessage `json:"origins"`
-	}
-
-	var response routesResponse
-	err := json.Unmarshal(data, &response)
-	if err != nil {
-		return err
-	}
-
-	r.Airports = make(map[string]Airport)
-	r.Routes = make(map[string]map[string]RouteDetails)
-
-	for _, originRaw := range response.Origins {
-
-		var origin originResponse
-		err = json.Unmarshal(originRaw, &origin)
-		if err != nil {
-			return err
-		}
-
-		var originAirport Airport
-		err = json.Unmarshal(originRaw, &originAirport)
-		if err != nil {
-			return err
-		}
-
-		r.Airports[originAirport.AirportCode] = originAirport
-
-		originRoutes := make(map[string]RouteDetails)
-		for _, destinationRaw := range origin.Destinations {
-			var destinationAirport Airport
-			err = json.Unmarshal(destinationRaw, &destinationAirport)
-			if err != nil {
-				return err
-			}
-
-			var route RouteDetails
-			err = json.Unmarshal(destinationRaw, &route)
-			if err != nil {
-				return err
-			}
-
-			r.Airports[destinationAirport.AirportCode] = destinationAirport
-			originRoutes[destinationAirport.AirportCode] = route
-		}
-
-		r.Routes[originAirport.AirportCode] = originRoutes
-	}
-
-	return nil
-}
-
-func (a *Airport) UnmarshalJSON(data []byte) error {
-	type airportResponse struct {
-		AirportCode string `json:"airportCode"`
-		AirportName string `json:"airportName"`
-		CountryCode string `json:"countryCode"`
-		Country     string `json:"countryName"`
-		City        string `json:"name"`
-	}
-
-	var response airportResponse
-	err := json.Unmarshal(data, &response)
-	if err != nil {
-		return err
-	}
-
-	a.AirportCode = response.AirportCode
-	a.AirportName = response.AirportName
-	a.CountryCode = response.CountryCode
-	a.Country = response.Country
-	a.City = response.City
-
-	return nil
-}
-
-func (r *RouteDetails) UnmarshalJSON(data []byte) error {
-	type routeResponse struct {
-		BroadSearchCategories []string    `json:"broadSearchCategories"`
-		Prices                AviosPrices `json:"aviosPerCabinClass"`
-		FlownByPartners       []string    `json:"flownByPartners"`
-	}
-
-	var response routeResponse
-	err := json.Unmarshal(data, &response)
-	if err != nil {
-		return err
-	}
-
-	r.Region = ""
-	if len(response.BroadSearchCategories) > 0 {
-		r.Region = response.BroadSearchCategories[0]
-	}
-	r.AviosPrices = response.Prices
-	r.FlownBy = response.FlownByPartners
-
-	return nil
-}
-
-// filterRoutesByOriginDestination filters the network by origins and destinations, returning
-// the routes - or the routes to all origins/destinations when either or neither are set.
-// Routes are ordered by origin then destination code.
-func filterRoutesByOriginDestination(network RouteNetwork, origins, destinations []string) []Route {
-	// Get ordered wanted origin codes
-	var wantedOrigins []string
-	if len(origins) == 0 {
-		wantedOrigins = slices.Sorted(maps.Keys(network.Routes))
-	} else {
-		wantedOrigins = origins
-		slices.Sort(origins)
-	}
-
-	wantedDestinations := mapset.NewSet(destinations...)
-
-	routes := make([]Route, 0)
-	for _, wantedOrigin := range wantedOrigins {
-
-		// Get destinations from the origin
-		originDestinations := network.Routes[wantedOrigin]
-		originDestinationCodes := slices.Sorted(maps.Keys(originDestinations))
-
-		for _, originDestinationCode := range originDestinationCodes {
-
-			// Skip if destination not in wanted destinations
-			if len(destinations) > 0 &&
-				!wantedDestinations.Contains(originDestinationCode) {
-				continue
-			}
-
-			routes = append(routes, Route{
-				Origin:      network.Airports[wantedOrigin],
-				Destination: network.Airports[originDestinationCode],
-				Details:     originDestinations[originDestinationCode],
-			})
-		}
-	}
-
-	return routes
 }

@@ -1,7 +1,6 @@
 package gavios
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -50,17 +49,31 @@ func TestDateRangeInRange(t *testing.T) {
 	assert.True(t, DateRange{}.InRange(day))
 }
 
-func TestFlightUnmarshalJSON(t *testing.T) {
-	flightJSON := `{"date":"2026-06-22T10:00:00","time":"10:00","seats":2,"carrier":"BA"}`
+func TestNewFlights(t *testing.T) {
+	response := flightsPerDateResponse{
+		Flights: map[string][]flightResponse{
+			"2026-06-22T00:00:00": {
+				{Date: "2026-06-22T10:00:00", Time: "10:00", Seats: 2, Carrier: "BA"},
+			},
+		},
+	}
 
-	var flight Flight
-	err := json.Unmarshal([]byte(flightJSON), &flight)
+	flights, err := response.toFlights()
 	require.NoError(t, err)
 
-	assert.Equal(t, testTime(time.June, 22), flight.Departure)
-	assert.Equal(t, "10:00", flight.Time)
-	assert.Equal(t, 2, flight.Seats)
-	assert.Equal(t, "BA", flight.Carrier)
+	require.Len(t, flights, 1)
+	assert.Equal(t, testTime(time.June, 22), flights[0].Departure)
+	assert.Equal(t, "10:00", flights[0].Time)
+	assert.Equal(t, 2, flights[0].Seats)
+	assert.Equal(t, "BA", flights[0].Carrier)
+
+	bad := flightsPerDateResponse{
+		Flights: map[string][]flightResponse{
+			"x": {{Date: "not-a-date"}},
+		},
+	}
+	_, err = bad.toFlights()
+	assert.Error(t, err)
 }
 
 func TestRouteFlightsFilterByDates(t *testing.T) {

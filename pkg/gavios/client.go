@@ -49,21 +49,24 @@ func (c *Client) MembershipNumber() (string, error) {
 }
 
 func (c *Client) Balance(ctx context.Context) (Balance, error) {
-	var balance Balance
-	err := c.get(
+	data, err := c.get(
 		ctx,
 		"/member/v1/balance",
 		nil,
-		&balance,
 	)
 	if err != nil {
 		return Balance{}, err
 	}
 
+	var balance Balance
+	err = json.Unmarshal(data, &balance)
+	if err != nil {
+		return Balance{}, fmt.Errorf("decoding balance response: %w", err)
+	}
+
 	return balance, nil
 }
 
-// RouteNetwork fetches reward destinations grouped by origin airport.
 func (c *Client) RouteNetwork(ctx context.Context) (RouteNetwork, error) {
 	query := url.Values{}
 	query.Set("ByAirport", "true")
@@ -73,21 +76,25 @@ func (c *Client) RouteNetwork(ctx context.Context) (RouteNetwork, error) {
 	query.Set("Infants", "0")
 	query.Set("OneWay", "false")
 
-	var routes RouteNetwork
-	err := c.get(
+	data, err := c.get(
 		ctx,
 		"/spend/v1/flight/routes",
 		query,
-		&routes,
 	)
 	if err != nil {
 		return RouteNetwork{}, err
 	}
-	return routes, nil
+
+	var response routesResponse
+	err = json.Unmarshal(data, &response)
+	if err != nil {
+		return RouteNetwork{}, fmt.Errorf("decoding routes response: %w", err)
+	}
+
+	return response.toRouteNetwork(), nil
 }
 
-// getAviosAllCabins calls the avios all cabins endpoint
-func (c *Client) getAviosAllCabins(
+func (c *Client) RouteFlights(
 	ctx context.Context,
 	origin, destination string,
 	oneWay bool,
@@ -113,21 +120,25 @@ func (c *Client) getAviosAllCabins(
 	query.Set("Infants", "0")
 	query.Set("IncludeNonBookableFlights", "false")
 
-	var routeFlights RouteFlights
-	err = c.get(
+	data, err := c.get(
 		ctx,
 		"/spend/v1/flight/allcabins",
 		query,
-		&routeFlights,
 	)
 	if err != nil {
 		return RouteFlights{}, err
 	}
 
-	return routeFlights, nil
+	var response routeFlightsResponse
+	err = json.Unmarshal(data, &response)
+	if err != nil {
+		return RouteFlights{}, fmt.Errorf("decoding flights response: %w", err)
+	}
+
+	return response.toRouteFlights()
 }
 
-func (c *Client) get(ctx context.Context, path string, query url.Values, outValue any) error {
+func (c *Client) get(ctx context.Context, path string, query url.Values) (json.RawMessage, error) {
 	request := c.httpClient.R().
 		SetContext(ctx).
 		SetHeader("Authorization", "Bearer "+c.authData.AccessToken)
@@ -138,19 +149,12 @@ func (c *Client) get(ctx context.Context, path string, query url.Values, outValu
 
 	response, err := request.Get(path)
 	if err != nil {
-		return fmt.Errorf("avios request failed: %w", err)
+		return nil, fmt.Errorf("avios request failed: %w", err)
 	}
 
 	if !response.IsStatusSuccess() {
-		return fmt.Errorf("avios api error: %d: %s", response.StatusCode(), response.String())
+		return nil, fmt.Errorf("avios api error: %d: %s", response.StatusCode(), response.String())
 	}
 
-	if outValue != nil {
-		err = json.Unmarshal(response.Bytes(), outValue)
-		if err != nil {
-			return fmt.Errorf("decoding response: %w", err)
-		}
-	}
-
-	return nil
+	return response.Bytes(), nil
 }
