@@ -64,14 +64,14 @@ func (c *Client) Balance(ctx context.Context) (Balance, error) {
 }
 
 // RouteNetwork fetches reward destinations grouped by origin airport.
-func (c *Client) RouteNetwork(ctx context.Context, adults int, oneWay bool) (RouteNetwork, error) {
+func (c *Client) RouteNetwork(ctx context.Context) (RouteNetwork, error) {
 	query := url.Values{}
 	query.Set("ByAirport", "true")
-	query.Set("Adults", strconv.Itoa(adults))
+	query.Set("Adults", "1")
 	query.Set("YoungAdults", "0")
 	query.Set("Children", "0")
 	query.Set("Infants", "0")
-	query.Set("OneWay", strconv.FormatBool(oneWay))
+	query.Set("OneWay", "false")
 
 	var routes RouteNetwork
 	err := c.get(
