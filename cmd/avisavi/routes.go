@@ -17,9 +17,24 @@ the minimum and maximum Avios needed per cabin class.
 
 Examples:
   avisavi routes
-  avisavi routes --origin LON`,
+  avisavi routes --origin LON
+  avisavi routes --destination JFK --destination BOS
+  avisavi routes --region "North America"`,
 	Flags: []cli.Flag{
-		&cli.StringFlag{Name: "origin", Aliases: []string{"o"}, Usage: "IATA origin code (omit for all origins)"},
+		&cli.StringSliceFlag{
+			Name:    "origin",
+			Aliases: []string{"o"},
+			Usage:   "IATA origin code (repeatable, scans all origins if omitted)",
+		},
+		&cli.StringSliceFlag{
+			Name:    "destination",
+			Aliases: []string{"d"},
+			Usage:   "IATA destination code (repeatable, scans all destinations if omitted)",
+		},
+		&cli.StringSliceFlag{
+			Name:  "region",
+			Usage: "destination region e.g. \"North America\" (repeatable)",
+		},
 		&cli.BoolFlag{Name: "json", Usage: "print raw JSON"},
 	},
 	Action: routesAction,
@@ -36,7 +51,11 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	routeList, err := routes.GetRoutes(cmd.String("origin"))
+	routeList, err := routes.FindRoutes(gavios.FindRoutesInput{
+		Origins:            cmd.StringSlice("origin"),
+		Destinations:       cmd.StringSlice("destination"),
+		DestinationRegions: cmd.StringSlice("region"),
+	})
 	if err != nil {
 		return err
 	}
