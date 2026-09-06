@@ -14,6 +14,10 @@ var (
 	numberStyle  = lipgloss.NewStyle().Bold(true)
 	noteStyle    = lipgloss.NewStyle().Foreground(adaptiveColour("248"))
 	headerStyle  = lipgloss.NewStyle().Bold(true).Foreground(adaptiveColour("248"))
+
+	// Airport codes in routes output: origin cyan, destination green.
+	originCodeStyle      = lipgloss.NewStyle().Foreground(adaptiveColour("80"))
+	destinationCodeStyle = lipgloss.NewStyle().Foreground(adaptiveColour("114"))
 )
 
 // Find command styles.

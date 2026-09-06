@@ -66,8 +66,10 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 
 	rows := make([][]string, 0, len(routes))
 	for _, route := range routes {
-		origin := fmt.Sprintf("%s (%s)", route.Origin.City, route.Origin.AirportCode)
-		destination := fmt.Sprintf("%s (%s)", route.Destination.City, route.Destination.AirportCode)
+		origin := fmt.Sprintf("%s (%s)", route.Origin.City, originCodeStyle.Render(route.Origin.AirportCode))
+		destination := fmt.Sprintf(
+			"%s (%s)", route.Destination.City, destinationCodeStyle.Render(route.Destination.AirportCode),
+		)
 
 		economyPrice := aviosRange(route.Details.AviosPrices.Economy)
 		businessPrice := aviosRange(route.Details.AviosPrices.Business)
