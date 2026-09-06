@@ -131,7 +131,7 @@ func TestClient_RouteFlights(t *testing.T) {
 	assert.Equal(t, "ABV", query.Get("Destination"))
 	assert.Equal(t, "false", query.Get("OneWay"))
 	assert.Equal(t, "1", query.Get("Adults"))
-	assert.Equal(t, "true", query.Get("IncludeNonBookableFlights"))
+	assert.Equal(t, "false", query.Get("IncludeNonBookableFlights"))
 }
 
 func TestNormalizeAirportCode(t *testing.T) {

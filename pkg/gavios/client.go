@@ -111,7 +111,7 @@ func (c *Client) RouteFlights(
 	query.Set("YoungAdults", "0")
 	query.Set("Children", "0")
 	query.Set("Infants", "0")
-	query.Set("IncludeNonBookableFlights", "true")
+	query.Set("IncludeNonBookableFlights", "false")
 
 	var routeFlights RouteFlights
 	err = c.get(
