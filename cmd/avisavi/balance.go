@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/urfave/cli/v3"
 )
@@ -36,10 +37,14 @@ func balanceAction(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	if balance.IsHousehold {
-		fmt.Printf("%d Avios (household)\n", balance.AvailableAvios)
-	} else {
-		fmt.Printf("%d Avios\n", balance.AvailableAvios)
+		fmt.Printf(
+			"%s Avios %s\n",
+			numberStyle.Render(strconv.Itoa(balance.AvailableAvios)),
+			noteStyle.Render("(household)"),
+		)
+		return nil
 	}
 
+	fmt.Printf("%s Avios\n", numberStyle.Render(strconv.Itoa(balance.AvailableAvios)))
 	return nil
 }

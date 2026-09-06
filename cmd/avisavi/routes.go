@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
-	"text/tabwriter"
+	"strconv"
 
+	"github.com/ahobsonsayers/avisavi/pkg/gavios"
 	"github.com/urfave/cli/v3"
 )
 
@@ -52,17 +52,42 @@ func routesAction(ctx context.Context, cmd *cli.Command) error {
 		return printJSON(routeList)
 	}
 
-	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	rows := make([][]string, 0, len(routeList))
 	for _, route := range routeList {
-		fmt.Fprintf(
-			writer,
-			"%s (%s)\t->\t%s (%s)\tEconomy %d-%d\tBusiness %d-%d\n",
-			route.Origin.City, route.Origin.AirportCode,
-			route.Destination.City, route.Destination.AirportCode,
-			route.Details.AviosPrices.Economy.MinAvios, route.Details.AviosPrices.Economy.MaxAvios,
-			route.Details.AviosPrices.Business.MinAvios, route.Details.AviosPrices.Business.MaxAvios,
+		origin := fmt.Sprintf("%s (%s)", route.Origin.City, route.Origin.AirportCode)
+		destination := fmt.Sprintf("%s (%s)", route.Destination.City, route.Destination.AirportCode)
+
+		economyPrice := aviosRange(route.Details.AviosPrices.Economy)
+		businessPrice := aviosRange(route.Details.AviosPrices.Business)
+
+		rows = append(
+			rows,
+			[]string{origin, "→", destination, economyPrice, businessPrice},
 		)
 	}
 
-	return writer.Flush()
+	table := baseTable.
+		Headers("Origin", "", "Destination", "Economy", "Business").
+		Rows(rows...)
+
+	fmt.Println(table.Render())
+	return nil
+}
+
+// aviosRange formats an Avios price range with thousands separators.
+func aviosRange(prices gavios.AviosPrice) string {
+	return fmt.Sprintf("%s - %s", groupedNumber(prices.MinAvios), groupedNumber(prices.MaxAvios))
+}
+
+// groupedNumber formats a number with thousands separators.
+func groupedNumber(value int) string {
+	digits := strconv.Itoa(value)
+	grouped := ""
+	for i, digit := range digits {
+		if i > 0 && (len(digits)-i)%3 == 0 {
+			grouped += ","
+		}
+		grouped += string(digit)
+	}
+	return grouped
 }

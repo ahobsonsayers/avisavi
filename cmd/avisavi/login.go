@@ -71,7 +71,7 @@ func loginAction(ctx context.Context, cmd *cli.Command) error {
 		mode = auth.Manual
 	} else {
 		fmt.Println("Logging in using CloakBrowser.")
-		fmt.Println("If not found, it will be downloaded first (~200MB - be patient)")
+		fmt.Println(noteStyle.Render("If not found, it will be downloaded first (~200MB - be patient)"))
 		mode = auth.CloakBrowser
 	}
 
@@ -85,7 +85,7 @@ func loginAction(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("saving token: %w", err)
 	}
 
-	fmt.Println("Logged in. Token saved to", auth.AuthDataFilePath())
+	fmt.Println(successStyle.Render("Logged in. Token saved to " + auth.AuthDataFilePath()))
 	return nil
 }
 
@@ -103,6 +103,6 @@ func loginCleanupAction(_ context.Context, _ *cli.Command) error {
 		return fmt.Errorf("failed to remove CloakBrowser: %w", err)
 	}
 
-	fmt.Printf("Removed CloakBrowser at %s\n", browserDir)
+	fmt.Println(successStyle.Render("Removed CloakBrowser at " + browserDir))
 	return nil
 }
