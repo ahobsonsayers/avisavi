@@ -50,7 +50,7 @@ func newFlightTable(rows [][]string) *table.Table {
 
 // flightTableStyle styles find flight tables: header dim, body plain.
 // Padding is applied per cell for comfortable spacing.
-func flightTableStyle(_ int, col int) lipgloss.Style {
+func flightTableStyle(_, col int) lipgloss.Style {
 	if col == 0 {
 		return headerStyle.Padding(0, 2)
 	}
@@ -59,7 +59,7 @@ func flightTableStyle(_ int, col int) lipgloss.Style {
 
 // routesTableStyle styles the routes table columns: dim arrow, bold Avios.
 // Padding is applied per cell for comfortable spacing.
-func routesTableStyle(_ int, col int) lipgloss.Style {
+func routesTableStyle(_, col int) lipgloss.Style {
 	switch col {
 	case 1:
 		return arrowStyle.Padding(0, 1)

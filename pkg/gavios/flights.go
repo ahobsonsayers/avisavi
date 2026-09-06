@@ -131,12 +131,7 @@ func (r *RouteFlights) UnmarshalJSON(data []byte) error {
 	}
 
 	availability := response.AvailabilityPerCabin
-	*r = RouteFlights{
-		Economy:  availability.Economy,
-		Premium:  availability.Premium,
-		Business: availability.Business,
-		First:    availability.First,
-	}
+	*r = RouteFlights(availability)
 
 	return nil
 }
