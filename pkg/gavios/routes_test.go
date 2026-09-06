@@ -115,13 +115,16 @@ func TestRoutes_GetRoute(t *testing.T) {
 		t.Errorf("details wrong: %+v", route.Details)
 	}
 
-	if _, err := routes.GetRoute("JFK", "ABV"); err == nil {
+	_, err = routes.GetRoute("JFK", "ABV")
+	if err == nil {
 		t.Error("unknown origin should error")
 	}
-	if _, err := routes.GetRoute("LON", "LON"); err == nil {
+	_, err = routes.GetRoute("LON", "LON")
+	if err == nil {
 		t.Error("unknown destination should error")
 	}
-	if _, err := routes.GetRoute("XYZ", "ABV"); err == nil {
+	_, err = routes.GetRoute("XYZ", "ABV")
+	if err == nil {
 		t.Error("invalid code should error")
 	}
 }
@@ -167,10 +170,12 @@ func TestRoutes_GetRoutes_Origin(t *testing.T) {
 		t.Errorf("route details missing: %+v", lonRoutes[0].Details)
 	}
 
-	if _, err := routes.GetRoutes("JFK"); err == nil {
+	_, err = routes.GetRoutes("JFK")
+	if err == nil {
 		t.Error("unknown origin should error")
 	}
-	if _, err := routes.GetRoutes("12"); err == nil {
+	_, err = routes.GetRoutes("12")
+	if err == nil {
 		t.Error("invalid code should error")
 	}
 }
