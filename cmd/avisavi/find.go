@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ahobsonsayers/avisavi/pkg/gavios"
+	"github.com/fatih/color"
 	"github.com/urfave/cli/v3"
 )
 
@@ -191,9 +192,14 @@ func renderFlightsWithoutDates(w io.Writer, found []gavios.FoundFlights, cabin s
 		cabins := cabinTripFlights(flights.RouteFlights, cabin)
 
 		for _, cabinFlight := range cabins {
+			if len(cabinFlight.tripFlights.Outbound) == 0 &&
+				len(cabinFlight.tripFlights.Inbound) == 0 {
+				continue
+			}
+
 			fmt.Fprintf(w, "\n--- %s ---\n", cabinFlight.name)
-			renderFlights(w, "outbound", cabinFlight.tripFlights.Outbound)
-			renderFlights(w, "inbound", cabinFlight.tripFlights.Inbound)
+			renderFlights(w, "Outbound", cabinFlight.tripFlights.Outbound)
+			renderFlights(w, "Inbound", cabinFlight.tripFlights.Inbound)
 		}
 	}
 
@@ -209,27 +215,34 @@ func renderFlights(w io.Writer, name string, flights []gavios.Flight) {
 	fmt.Fprintf(w, "\n  %s:\n", name)
 
 	for _, flight := range flights {
-		fmt.Fprintf(
-			w, "    %s %s seats=%d %s [%s]\n",
+		line := fmt.Sprintf(
+			"    %s %s seats=%d %s",
 			flight.Departure.Format("2006-01-02"),
 			flight.Time,
 			flight.Seats,
 			flight.Carrier,
-			seatColour(flight.Seats),
 		)
+		fmt.Fprintln(w, seatLineColour(flight.Seats, line))
 	}
 }
 
-// Seat availability colour bands (the API no longer reports thresholds).
-func seatColour(seats int) string {
+var (
+	seatGreen  = color.New(color.FgGreen).SprintFunc()
+	seatYellow = color.New(color.FgYellow).SprintFunc()
+	seatRed    = color.New(color.FgRed).SprintFunc()
+)
+
+// seatLineColour colours a flight line by seat availability. Colour is
+// disabled automatically for non-TTY output or when NO_COLOR is set.
+func seatLineColour(seats int, line string) string {
 	switch {
 	case seats >= 9:
-		return "GREEN"
+		return seatGreen(line)
 	case seats >= 5:
-		return "YELLOW"
+		return seatYellow(line)
 	case seats >= 1:
-		return "RED"
+		return seatRed(line)
 	default:
-		return "---"
+		return line
 	}
 }
